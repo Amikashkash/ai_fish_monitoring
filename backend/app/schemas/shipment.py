@@ -23,7 +23,7 @@ Example:
 """
 
 from pydantic import BaseModel, Field, field_validator
-from datetime import date
+from datetime import date as Date
 from typing import Optional
 from decimal import Decimal
 
@@ -55,7 +55,7 @@ class ShipmentCreate(ShipmentBase):
 
     Example:
         >>> shipment = ShipmentCreate(
-        ...     date=date.today(),
+        ...     date=Date.today(),
         ...     scientific_name="Paracheirodon innesi",
         ...     common_name="Neon Tetra",
         ...     source="Singapore",
@@ -65,7 +65,7 @@ class ShipmentCreate(ShipmentBase):
         ... )
     """
 
-    date: date = Field(default_factory=date.today, description="Shipment arrival date")
+    date: Date = Field(default_factory=Date.today, description="Shipment arrival date")
 
 
 class ShipmentUpdate(BaseModel):
@@ -106,9 +106,9 @@ class ShipmentResponse(ShipmentBase):
     """
 
     id: int
-    date: date
+    date: Date
     density: Optional[Decimal] = Field(None, description="Auto-calculated fish per liter")
-    created_at: Optional[date] = None
+    created_at: Optional[Date] = None
 
     class Config:
         """Pydantic config for ORM mode."""

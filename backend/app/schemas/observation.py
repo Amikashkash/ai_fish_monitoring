@@ -21,7 +21,7 @@ Example:
 """
 
 from pydantic import BaseModel, Field, field_validator
-from datetime import date
+from datetime import date as Date
 from typing import Optional
 
 
@@ -29,7 +29,7 @@ class ObservationBase(BaseModel):
     """Base observation schema."""
 
     treatment_id: int = Field(..., gt=0)
-    observation_date: date = Field(default_factory=date.today)
+    observation_date: Date = Field(default_factory=Date.today)
     overall_condition_score: Optional[int] = Field(None, ge=1, le=5)
 
     # Symptom checkboxes
@@ -59,7 +59,7 @@ class ObservationCreate(ObservationBase):
     Example:
         >>> obs = ObservationCreate(
         ...     treatment_id=1,
-        ...     observation_date=date.today(),
+        ...     observation_date=Date.today(),
         ...     overall_condition_score=3,
         ...     symptoms_loss_of_appetite=True,
         ...     symptoms_spots=True,
@@ -110,7 +110,7 @@ class ObservationResponse(ObservationBase):
     """
 
     id: int
-    created_at: Optional[date] = None
+    created_at: Optional[Date] = None
 
     class Config:
         """Pydantic config for ORM mode."""

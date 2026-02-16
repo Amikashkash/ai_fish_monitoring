@@ -15,7 +15,7 @@ from app.ai.client import get_ai_client, get_default_model, get_default_max_toke
 from app.ai.prompts import SYSTEM_PROMPT_SUPPLIER, build_supplier_scoring_prompt
 from app.crud import ai_knowledge
 from app.schemas.recommendation import SupplierScore
-from app.services.supplier_analyzer import get_supplier_performance
+from app.services.supplier_analyzer import analyze_supplier_performance
 
 
 async def score_suppliers(db: Session) -> List[SupplierScore]:
@@ -55,14 +55,12 @@ async def score_suppliers(db: Session) -> List[SupplierScore]:
         total_shipments = sum(k.sample_size for k in knowledge_list)
         avg_success = sum(k.success_rate * k.sample_size for k in knowledge_list) / total_shipments if total_shipments > 0 else 0
         
-        prompt_data_lines.append(f"
-{supplier}:")
+        prompt_data_lines.append(f"\n{supplier}:")
         prompt_data_lines.append(f"  Total Shipments: {total_shipments}")
         prompt_data_lines.append(f"  Average Success Rate: {avg_success:.1f}%")
         prompt_data_lines.append(f"  Species Tracked: {len(knowledge_list)}")
 
-    prompt_data = "
-".join(prompt_data_lines)
+    prompt_data = "\n".join(prompt_data_lines)
     user_prompt = build_supplier_scoring_prompt(prompt_data)
 
     # Call AI

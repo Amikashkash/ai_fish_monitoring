@@ -16,45 +16,61 @@ const apiClient = axios.create({
 // Shipments API
 export const shipmentsAPI = {
   create: (data) => apiClient.post("/api/shipments", data),
-  getById: (id) => apiClient.get(\),
+  getById: (id) => apiClient.get(`/api/shipments/${id}`),
   list: (params) => apiClient.get("/api/shipments", { params })
 };
 
 // Treatments API
 export const treatmentsAPI = {
   create: (data) => apiClient.post("/api/treatments", data),
-  getById: (id) => apiClient.get(\),
+  getById: (id) => apiClient.get(`/api/treatments/${id}`),
   list: (activeOnly = false) => apiClient.get("/api/treatments", { params: { active_only: activeOnly } }),
-  complete: (id) => apiClient.post(\)
+  complete: (id) => apiClient.post(`/api/treatments/${id}/complete`)
 };
 
 // Observations API
 export const observationsAPI = {
   create: (data) => apiClient.post("/api/observations", data),
-  listByTreatment: (treatmentId) => apiClient.get(\)
+  listByTreatment: (treatmentId) => apiClient.get(`/api/observations/treatment/${treatmentId}`)
 };
 
 // Followups API
 export const followupsAPI = {
   create: (data) => apiClient.post("/api/followups", data),
-  getByTreatment: (treatmentId) => apiClient.get(\)
+  getByTreatment: (treatmentId) => apiClient.get(`/api/followups/treatment/${treatmentId}`)
 };
 
 // Protocols API
 export const protocolsAPI = {
   list: () => apiClient.get("/api/protocols"),
-  getById: (id) => apiClient.get(\),
+  getById: (id) => apiClient.get(`/api/protocols/${id}`),
   create: (data) => apiClient.post("/api/protocols", data)
+};
+
+// Protocol Templates API
+export const protocolTemplatesAPI = {
+  list: (params) => apiClient.get("/api/protocol-templates", { params }),
+  getById: (id) => apiClient.get(`/api/protocol-templates/${id}`),
+  getDetails: (id) => apiClient.get(`/api/protocol-templates/details/${id}`),
+  create: (data) => apiClient.post("/api/protocol-templates", data),
+  update: (id, data) => apiClient.put(`/api/protocol-templates/${id}`, data),
+  delete: (id) => apiClient.delete(`/api/protocol-templates/${id}`),
+  updateUsage: (id, wasSuccessful) =>
+    apiClient.post(`/api/protocol-templates/${id}/usage`, { was_successful: wasSuccessful }),
+  recommendByPurpose: (purpose, params) =>
+    apiClient.get("/api/protocol-templates/recommend/by-purpose", {
+      params: { purpose, ...params }
+    })
 };
 
 // Recommendations API
 export const recommendationsAPI = {
-  preShipment: (scientificName, sourceCountry) => 
+  preShipment: (scientificName, sourceCountry) =>
     apiClient.get("/api/recommendations/pre-shipment", {
       params: { scientific_name: scientificName, source_country: sourceCountry }
     }),
-  protocol: (shipmentId) => 
-    apiClient.get(\)
+  protocol: (shipmentId) =>
+    apiClient.get(`/api/recommendations/protocol/${shipmentId}`)
 };
 
 // Suppliers API
@@ -65,6 +81,51 @@ export const suppliersAPI = {
 // Tasks API
 export const tasksAPI = {
   getDaily: () => apiClient.get("/api/tasks/daily")
+};
+
+// Excel Import API
+export const excelImportAPI = {
+  /**
+   * Extract shipment data from Excel file using AI
+   * @param {File} file - Excel file to process
+   * @param {string} sheetName - Optional sheet name to analyze
+   * @returns {Promise} - Extracted data with validation
+   */
+  extract: (file, sheetName = null) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (sheetName) {
+      formData.append("sheet_name", sheetName);
+    }
+    return apiClient.post("/api/excel-import/extract", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
+  },
+
+  /**
+   * Extract data and optionally create shipment
+   * @param {File} file - Excel file
+   * @param {boolean} autoCreate - Whether to auto-create shipment
+   * @returns {Promise} - Extracted data and shipment ID if created
+   */
+  extractAndCreate: (file, autoCreate = false) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("auto_create", autoCreate);
+    return apiClient.post("/api/excel-import/extract-and-create-shipment", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
+  },
+
+  /**
+   * Get supported Excel formats and tips
+   * @returns {Promise} - Supported formats info
+   */
+  getSupportedFormats: () => apiClient.get("/api/excel-import/supported-formats")
 };
 
 export default apiClient;

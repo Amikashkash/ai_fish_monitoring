@@ -14,13 +14,13 @@ Example:
     >>> from app.schemas.treatment import TreatmentCreate
     >>> treatment = TreatmentCreate(
     ...     shipment_id=1,
-    ...     start_date=date.today(),
+    ...     start_date=Date.today(),
     ...     drugs=[{"drug_protocol_id": 1, "actual_dosage": 2.5}]
     ... )
 """
 
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date as Date
 from typing import Optional, List
 from decimal import Decimal
 
@@ -75,8 +75,8 @@ class TreatmentBase(BaseModel):
     """Base treatment schema."""
 
     shipment_id: int = Field(..., gt=0)
-    start_date: date = Field(default_factory=date.today)
-    end_date: Optional[date] = None
+    start_date: Date = Field(default_factory=Date.today)
+    end_date: Optional[Date] = None
     status: str = Field(default="active", pattern="^(active|completed|modified)$")
 
 
@@ -89,7 +89,7 @@ class TreatmentCreate(TreatmentBase):
     Example:
         >>> treatment = TreatmentCreate(
         ...     shipment_id=1,
-        ...     start_date=date.today(),
+        ...     start_date=Date.today(),
         ...     drugs=[
         ...         {"drug_protocol_id": 1, "actual_dosage": 2.5},
         ...         {"drug_protocol_id": 2, "actual_dosage": 1.0}
@@ -108,12 +108,12 @@ class TreatmentUpdate(BaseModel):
 
     Example:
         >>> update = TreatmentUpdate(
-        ...     end_date=date.today(),
+        ...     end_date=Date.today(),
         ...     status="completed"
         ... )
     """
 
-    end_date: Optional[date] = None
+    end_date: Optional[Date] = None
     status: Optional[str] = Field(None, pattern="^(active|completed|modified)$")
 
 
@@ -132,7 +132,7 @@ class TreatmentResponse(TreatmentBase):
     """
 
     id: int
-    created_at: Optional[date] = None
+    created_at: Optional[Date] = None
     drugs: List[TreatmentDrugResponse] = Field(default_factory=list)
 
     class Config:

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 from app.crud import treatment as treatment_crud
-from app.services.treatment_scheduler import get_treatments_needing_observation
+from app.services.treatment_scheduler import get_daily_treatment_tasks
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 

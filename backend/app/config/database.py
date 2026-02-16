@@ -22,6 +22,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
+from urllib.parse import quote_plus
 
 from app.config.settings import get_settings
 
@@ -29,12 +30,14 @@ from app.config.settings import get_settings
 settings = get_settings()
 
 # Construct PostgreSQL database URL for Supabase
-# Format: postgresql://postgres:[password]@[host]:[port]/postgres
+# Format: postgresql://postgres.[project-ref]:[password]@[pooler-host]:[port]/postgres
 # Note: Supabase provides connection details in project settings
+project_ref = settings.SUPABASE_URL.split('//')[1].split('.')[0]
+# URL-encode password to handle special characters like @
+encoded_password = quote_plus(settings.SUPABASE_DB_PASSWORD)
 DATABASE_URL = (
-    f"postgresql://postgres:[YOUR-PASSWORD]@"
-    f"db.{settings.SUPABASE_URL.split('//')[1].split('.')[0]}"
-    f".supabase.co:5432/postgres"
+    f"postgresql://postgres.{project_ref}:{encoded_password}@"
+    f"db.blgqdtvwizxdiyeiciwf.supabase.co:5432/postgres"
 )
 
 # Create SQLAlchemy engine

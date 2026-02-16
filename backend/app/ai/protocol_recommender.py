@@ -19,12 +19,14 @@ Example:
     >>> print(protocol.confidence)  # "high" | "medium" | "low" | "no_data"
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
+from supabase import Client
 
 from app.ai.client import get_ai_client, get_default_model, get_default_max_tokens
 from app.ai.prompt_builder import build_shipment_summary, build_historical_context
 from app.ai.prompts import SYSTEM_PROMPT_PROTOCOL, build_protocol_prompt
+from app.ai.protocol_template_service import build_protocol_template_context
 from app.crud import shipment as shipment_crud
 from app.crud import ai_knowledge
 from app.schemas.recommendation import InitialProtocolRecommendation
@@ -32,7 +34,8 @@ from app.schemas.recommendation import InitialProtocolRecommendation
 
 async def recommend_initial_protocol(
     shipment_id: int,
-    db: Session
+    db: Session,
+    supabase: Optional[Client] = None
 ) -> InitialProtocolRecommendation:
     """
     Recommend treatment protocol for a new fish shipment.
@@ -97,13 +100,35 @@ async def recommend_initial_protocol(
             )
         )
 
-    # Step 4: Build AI prompt
+    # Step 4: Build AI prompt with protocol templates
     shipment_summary = build_shipment_summary(shipment)
     historical_context = build_historical_context(knowledge)
+
+    # Add protocol template context if available
+    protocol_template_context = ""
+    if supabase:
+        try:
+            # Determine treatment purpose from shipment conditions
+            # For now, we'll include general templates. In future, we can infer purpose from shipment.
+            protocol_template_context = build_protocol_template_context(
+                supabase=supabase,
+                purpose=None,  # Get all proven templates
+                limit=3
+            )
+        except Exception as e:
+            print(f"Warning: Could not fetch protocol templates: {e}")
+            protocol_template_context = ""
+
     user_prompt = build_protocol_prompt(
         shipment_summary=shipment_summary,
         historical_context=historical_context
     )
+
+    # Append protocol template context to prompt
+    if protocol_template_context:
+        user_prompt += f"\n\n{protocol_template_context}\n\n" + \
+                       "Consider the above protocol templates when making your recommendation. " + \
+                       "If a template matches the situation well and has proven success, recommend it."
 
     # Step 5: Call Claude API
     client = get_ai_client()
@@ -219,7 +244,8 @@ def _extract_drugs_from_knowledge(knowledge) -> List[Dict[str, Any]]:
 
 def recommend_initial_protocol_sync(
     shipment_id: int,
-    db: Session
+    db: Session,
+    supabase: Optional[Client] = None
 ) -> InitialProtocolRecommendation:
     """
     Synchronous version of recommend_initial_protocol.
@@ -229,6 +255,7 @@ def recommend_initial_protocol_sync(
     Args:
         shipment_id: Shipment ID
         db: Database session
+        supabase: Optional Supabase client for protocol templates
 
     Returns:
         Protocol recommendation
@@ -236,8 +263,9 @@ def recommend_initial_protocol_sync(
     Example:
         >>> recommendation = recommend_initial_protocol_sync(
         ...     shipment_id=1,
-        ...     db=db
+        ...     db=db,
+        ...     supabase=supabase
         ... )
     """
     import asyncio
-    return asyncio.run(recommend_initial_protocol(shipment_id, db))
+    return asyncio.run(recommend_initial_protocol(shipment_id, db, supabase))

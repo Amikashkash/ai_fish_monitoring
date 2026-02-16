@@ -2,8 +2,10 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from supabase import Client
 
 from app.api.dependencies import get_db
+from app.config.supabase_client import get_supabase
 from app.schemas.recommendation import PreShipmentAdvice, InitialProtocolRecommendation
 from app.ai.pre_shipment_advisor import get_pre_shipment_advice_sync
 from app.ai.protocol_recommender import recommend_initial_protocol_sync
@@ -41,10 +43,13 @@ async def get_pre_shipment_recommendation(
 @router.get("/protocol/{shipment_id}", response_model=InitialProtocolRecommendation)
 async def get_protocol_recommendation(
     shipment_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    supabase: Client = Depends(get_supabase)
 ):
     """
     Get AI-recommended treatment protocol for a new shipment.
+
+    Now includes protocol template recommendations based on historical success rates.
 
     Args:
         shipment_id: ID of the shipment
@@ -55,7 +60,8 @@ async def get_protocol_recommendation(
     try:
         recommendation = recommend_initial_protocol_sync(
             shipment_id=shipment_id,
-            db=db
+            db=db,
+            supabase=supabase
         )
         return recommendation
     except ValueError as e:

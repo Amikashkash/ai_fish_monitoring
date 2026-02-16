@@ -21,9 +21,11 @@ from app.api import (
     observations,
     followups,
     protocols,
+    protocol_templates,
     recommendations,
     suppliers,
-    tasks
+    tasks,
+    excel_import
 )
 
 # Initialize settings
@@ -54,6 +56,8 @@ app.include_router(treatments.router)
 app.include_router(observations.router)
 app.include_router(followups.router)
 app.include_router(protocols.router)
+app.include_router(protocol_templates.router)
+app.include_router(excel_import.router)
 app.include_router(recommendations.router)
 app.include_router(suppliers.router)
 app.include_router(tasks.router)

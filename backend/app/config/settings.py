@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     # Database Configuration
     SUPABASE_URL: str
     SUPABASE_KEY: str
+    SUPABASE_DB_PASSWORD: str
 
     # n8n Integration
     N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook/fish-monitoring"

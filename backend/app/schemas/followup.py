@@ -22,7 +22,7 @@ Example:
 """
 
 from pydantic import BaseModel, Field, field_validator
-from datetime import date
+from datetime import date as Date
 from typing import Optional
 from decimal import Decimal
 
@@ -31,7 +31,7 @@ class FollowupBase(BaseModel):
     """Base follow-up assessment schema."""
 
     treatment_id: int = Field(..., gt=0)
-    followup_date: date = Field(default_factory=date.today)
+    followup_date: Date = Field(default_factory=Date.today)
     stability_score: Optional[int] = Field(None, ge=1, le=5)
     symptoms_returned: bool = False
     returned_symptoms: Optional[str] = None
@@ -56,7 +56,7 @@ class FollowupCreate(FollowupBase):
     Example:
         >>> followup = FollowupCreate(
         ...     treatment_id=1,
-        ...     followup_date=date.today(),
+        ...     followup_date=Date.today(),
         ...     stability_score=4,
         ...     symptoms_returned=False,
         ...     survival_count=47,
@@ -102,7 +102,7 @@ class FollowupResponse(FollowupBase):
     """
 
     id: int
-    created_at: Optional[date] = None
+    created_at: Optional[Date] = None
 
     class Config:
         """Pydantic config for ORM mode."""
