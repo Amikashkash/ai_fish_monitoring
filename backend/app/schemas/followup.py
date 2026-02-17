@@ -102,7 +102,7 @@ class FollowupResponse(FollowupBase):
     """
 
     id: int
-    created_at: Optional[Date] = None
+    created_at: Optional[str] = None
 
     class Config:
         """Pydantic config for ORM mode."""

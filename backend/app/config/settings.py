@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     # n8n Integration
     N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook/fish-monitoring"
 
-    # CORS Configuration
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    # CORS Configuration - includes all common Vite dev ports
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178,http://localhost:3000"
 
     # Environment
     ENVIRONMENT: str = "development"

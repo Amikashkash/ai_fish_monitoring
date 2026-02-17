@@ -6,85 +6,69 @@ Created: 2026-02-15
 
 This module analyzes historical data to advise on the success likelihood
 of ordering a specific fish species from a particular supplier/source.
-
-Dependencies:
-    - app.ai.client: Claude API client
-    - app.ai.prompt_builder: Historical context builder
-    - app.crud.ai_knowledge: Knowledge base access
-    - app.schemas.recommendation: Response schemas
-    - anthropic: Claude SDK
-
-Example:
-    >>> from app.ai.pre_shipment_advisor import get_pre_shipment_advice
-    >>> advice = await get_pre_shipment_advice(
-    ...     scientific_name="Betta splendens",
-    ...     source_country="Thailand",
-    ...     db_session=db
-    ... )
-    >>> print(advice.confidence)  # "high" | "medium" | "low" | "no_data"
 """
 
-from typing import Optional
-from sqlalchemy.orm import Session
+from supabase import Client
 
 from app.ai.client import get_ai_client, get_default_model, get_default_max_tokens
-from app.ai.prompt_builder import build_historical_context
 from app.ai.prompts import (
     SYSTEM_PROMPT_PRE_SHIPMENT,
     build_pre_shipment_prompt
 )
-from app.crud import ai_knowledge
 from app.schemas.recommendation import PreShipmentAdvice
 
 
-async def get_pre_shipment_advice(
+def _build_historical_context(knowledge: dict) -> str:
+    """Format ai_knowledge dict into context string for AI prompt."""
+    lines = [
+        f"Source: {knowledge.get('source_country', '')}",
+        f"Species: {knowledge.get('scientific_name', '')}",
+        f"Previous Shipments: {knowledge.get('sample_size', 0)}",
+        f"Success Rate: {knowledge.get('success_rate', 0)}%",
+    ]
+    protocols = knowledge.get("successful_protocols")
+    if protocols:
+        lines.append("\nSuccessful Protocols:")
+        if isinstance(protocols, dict):
+            for key, value in protocols.items():
+                lines.append(f"  - {key}: {value}")
+        else:
+            lines.append(f"  {protocols}")
+    insights = knowledge.get("insights")
+    if insights:
+        lines.append("\nKey Insights:")
+        lines.append(insights)
+    return "\n".join(lines)
+
+
+def get_pre_shipment_advice(
     scientific_name: str,
     source_country: str,
-    db: Session
+    supabase: Client
 ) -> PreShipmentAdvice:
     """
     Get AI recommendation before ordering fish from a specific source.
 
-    This function:
-    1. Queries historical data for this fish/source combination
-    2. Builds context for AI prompt
-    3. Calls Claude API with "historical data only" constraint
-    4. Returns advice with confidence level
-
     Args:
         scientific_name: Latin name of fish species (e.g., "Betta splendens")
         source_country: Origin country (e.g., "Thailand", "Sri Lanka")
-        db: Database session for querying historical data
+        supabase: Supabase client for querying historical data
 
     Returns:
-        PreShipmentAdvice object containing:
-        - confidence: "high" | "medium" | "low" | "no_data"
-        - success_rate: Historical success percentage (or None)
-        - sample_size: Number of previous shipments (or 0)
-        - recommendation: Text advice from AI
-        - suggested_protocol: Drug protocol if available
-
-    Example:
-        >>> advice = await get_pre_shipment_advice(
-        ...     scientific_name="Betta splendens",
-        ...     source_country="Thailand",
-        ...     db_session=db
-        ... )
-        >>> if advice.confidence == "high":
-        ...     print(f"Safe to order! {advice.success_rate}% success rate")
-        >>> elif advice.confidence == "no_data":
-        ...     print("No historical data - proceed with caution")
+        PreShipmentAdvice object containing confidence, success_rate, recommendation
     """
-
-    # Step 1: Retrieve historical knowledge
-    knowledge = ai_knowledge.get_knowledge_for_fish_source(
-        db=db,
-        scientific_name=scientific_name,
-        source_country=source_country
+    # Step 1: Retrieve historical knowledge from Supabase
+    response = (
+        supabase.table("ai_knowledge")
+        .select("*")
+        .eq("scientific_name", scientific_name)
+        .eq("source_country", source_country)
+        .execute()
     )
+    knowledge = response.data[0] if response.data else None
 
     # Step 2: Handle case with no historical data
-    if not knowledge or knowledge.sample_size == 0:
+    if not knowledge or knowledge.get("sample_size", 0) == 0:
         return PreShipmentAdvice(
             confidence="no_data",
             success_rate=None,
@@ -98,7 +82,7 @@ async def get_pre_shipment_advice(
         )
 
     # Step 3: Build AI prompt with historical context
-    historical_context = build_historical_context(knowledge)
+    historical_context = _build_historical_context(knowledge)
     user_prompt = build_pre_shipment_prompt(
         scientific_name=scientific_name,
         source_country=source_country,
@@ -113,47 +97,28 @@ async def get_pre_shipment_advice(
             model=get_default_model(),
             max_tokens=get_default_max_tokens(),
             system=SYSTEM_PROMPT_PRE_SHIPMENT,
-            messages=[
-                {"role": "user", "content": user_prompt}
-            ]
+            messages=[{"role": "user", "content": user_prompt}]
         )
-
         ai_text = response.content[0].text
-
-        # Step 5: Parse AI response and return advice
-        return _parse_ai_response(
-            ai_text=ai_text,
-            knowledge=knowledge
-        )
+        return _parse_ai_response(ai_text=ai_text, knowledge=knowledge)
 
     except Exception as e:
-        # Fallback if AI fails
         return PreShipmentAdvice(
             confidence="medium",
-            success_rate=knowledge.success_rate,
-            sample_size=knowledge.sample_size,
+            success_rate=knowledge.get("success_rate"),
+            sample_size=knowledge.get("sample_size", 0),
             recommendation=(
-                f"Based on {knowledge.sample_size} previous shipments, "
-                f"success rate is {knowledge.success_rate}%. "
+                f"Based on {knowledge.get('sample_size', 0)} previous shipments, "
+                f"success rate is {knowledge.get('success_rate', 0)}%. "
                 f"AI analysis temporarily unavailable: {str(e)}"
             ),
-            suggested_protocol=knowledge.successful_protocols
+            suggested_protocol=knowledge.get("successful_protocols")
         )
 
 
-def _parse_ai_response(ai_text: str, knowledge) -> PreShipmentAdvice:
-    """
-    Parse AI text response into structured PreShipmentAdvice object.
-
-    Args:
-        ai_text: Raw text response from Claude
-        knowledge: Knowledge base record for fallback data
-
-    Returns:
-        Structured PreShipmentAdvice object
-    """
-    # Determine confidence level from response text
-    confidence = "medium"  # Default
+def _parse_ai_response(ai_text: str, knowledge: dict) -> PreShipmentAdvice:
+    """Parse AI text response into structured PreShipmentAdvice object."""
+    confidence = "medium"
     ai_lower = ai_text.lower()
 
     if "high confidence" in ai_lower or "highly confident" in ai_lower:
@@ -165,37 +130,8 @@ def _parse_ai_response(ai_text: str, knowledge) -> PreShipmentAdvice:
 
     return PreShipmentAdvice(
         confidence=confidence,
-        success_rate=knowledge.success_rate,
-        sample_size=knowledge.sample_size,
+        success_rate=knowledge.get("success_rate"),
+        sample_size=knowledge.get("sample_size", 0),
         recommendation=ai_text,
-        suggested_protocol=knowledge.successful_protocols
+        suggested_protocol=knowledge.get("successful_protocols")
     )
-
-
-def get_pre_shipment_advice_sync(
-    scientific_name: str,
-    source_country: str,
-    db: Session
-) -> PreShipmentAdvice:
-    """
-    Synchronous version of get_pre_shipment_advice.
-
-    Use this when calling from non-async context (e.g., FastAPI sync endpoints).
-
-    Args:
-        scientific_name: Latin name of fish species
-        source_country: Origin country
-        db: Database session
-
-    Returns:
-        PreShipmentAdvice object
-
-    Example:
-        >>> advice = get_pre_shipment_advice_sync(
-        ...     scientific_name="Betta splendens",
-        ...     source_country="Thailand",
-        ...     db=db
-        ... )
-    """
-    import asyncio
-    return asyncio.run(get_pre_shipment_advice(scientific_name, source_country, db))

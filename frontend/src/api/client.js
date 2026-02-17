@@ -15,44 +15,49 @@ const apiClient = axios.create({
 
 // Shipments API
 export const shipmentsAPI = {
-  create: (data) => apiClient.post("/api/shipments", data),
+  create: (data) => apiClient.post("/api/shipments/", data),
   getById: (id) => apiClient.get(`/api/shipments/${id}`),
-  list: (params) => apiClient.get("/api/shipments", { params })
+  list: (params) => apiClient.get("/api/shipments/", { params }),
+  update: (id, data) => apiClient.patch(`/api/shipments/${id}`, data),
+  delete: (id) => apiClient.delete(`/api/shipments/${id}`)
 };
 
 // Treatments API
 export const treatmentsAPI = {
-  create: (data) => apiClient.post("/api/treatments", data),
+  create: (data) => apiClient.post("/api/treatments/", data),
   getById: (id) => apiClient.get(`/api/treatments/${id}`),
-  list: (activeOnly = false) => apiClient.get("/api/treatments", { params: { active_only: activeOnly } }),
+  list: (activeOnly = false) => apiClient.get("/api/treatments/", { params: { active_only: activeOnly } }),
   complete: (id) => apiClient.post(`/api/treatments/${id}/complete`)
 };
 
 // Observations API
 export const observationsAPI = {
-  create: (data) => apiClient.post("/api/observations", data),
-  listByTreatment: (treatmentId) => apiClient.get(`/api/observations/treatment/${treatmentId}`)
+  create: (data) => apiClient.post("/api/observations/", data),
+  listByTreatment: (treatmentId) => apiClient.get(`/api/observations/treatment/${treatmentId}`),
+  getToday: () => apiClient.get("/api/observations/today")
 };
 
 // Followups API
 export const followupsAPI = {
-  create: (data) => apiClient.post("/api/followups", data),
+  create: (data) => apiClient.post("/api/followups/", data),
   getByTreatment: (treatmentId) => apiClient.get(`/api/followups/treatment/${treatmentId}`)
 };
 
 // Protocols API
 export const protocolsAPI = {
-  list: () => apiClient.get("/api/protocols"),
+  list: () => apiClient.get("/api/protocols/"),
   getById: (id) => apiClient.get(`/api/protocols/${id}`),
-  create: (data) => apiClient.post("/api/protocols", data)
+  create: (data) => apiClient.post("/api/protocols/", data),
+  update: (id, data) => apiClient.put(`/api/protocols/${id}`, data),
+  delete: (id) => apiClient.delete(`/api/protocols/${id}`)
 };
 
 // Protocol Templates API
 export const protocolTemplatesAPI = {
-  list: (params) => apiClient.get("/api/protocol-templates", { params }),
+  list: (params) => apiClient.get("/api/protocol-templates/", { params }),
   getById: (id) => apiClient.get(`/api/protocol-templates/${id}`),
   getDetails: (id) => apiClient.get(`/api/protocol-templates/details/${id}`),
-  create: (data) => apiClient.post("/api/protocol-templates", data),
+  create: (data) => apiClient.post("/api/protocol-templates/", data),
   update: (id, data) => apiClient.put(`/api/protocol-templates/${id}`, data),
   delete: (id) => apiClient.delete(`/api/protocol-templates/${id}`),
   updateUsage: (id, wasSuccessful) =>

@@ -132,7 +132,7 @@ class TreatmentResponse(TreatmentBase):
     """
 
     id: int
-    created_at: Optional[Date] = None
+    created_at: Optional[str] = None
     drugs: List[TreatmentDrugResponse] = Field(default_factory=list)
 
     class Config:

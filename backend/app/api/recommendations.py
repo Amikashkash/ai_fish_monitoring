@@ -1,14 +1,12 @@
-"""AI recommendation API endpoints."""
+"""AI recommendation API endpoints using Supabase REST API."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from supabase import Client
 
-from app.api.dependencies import get_db
 from app.config.supabase_client import get_supabase
 from app.schemas.recommendation import PreShipmentAdvice, InitialProtocolRecommendation
-from app.ai.pre_shipment_advisor import get_pre_shipment_advice_sync
-from app.ai.protocol_recommender import recommend_initial_protocol_sync
+from app.ai.pre_shipment_advisor import get_pre_shipment_advice
+from app.ai.protocol_recommender import recommend_initial_protocol
 
 router = APIRouter(prefix="/api/recommendations", tags=["recommendations"])
 
@@ -17,7 +15,7 @@ router = APIRouter(prefix="/api/recommendations", tags=["recommendations"])
 async def get_pre_shipment_recommendation(
     scientific_name: str,
     source_country: str,
-    db: Session = Depends(get_db)
+    supabase: Client = Depends(get_supabase)
 ):
     """
     Get AI advice before ordering fish from a supplier.
@@ -30,10 +28,10 @@ async def get_pre_shipment_recommendation(
         Pre-shipment advice with confidence level and recommendations
     """
     try:
-        advice = get_pre_shipment_advice_sync(
+        advice = get_pre_shipment_advice(
             scientific_name=scientific_name,
             source_country=source_country,
-            db=db
+            supabase=supabase
         )
         return advice
     except Exception as e:
@@ -43,7 +41,6 @@ async def get_pre_shipment_recommendation(
 @router.get("/protocol/{shipment_id}", response_model=InitialProtocolRecommendation)
 async def get_protocol_recommendation(
     shipment_id: int,
-    db: Session = Depends(get_db),
     supabase: Client = Depends(get_supabase)
 ):
     """
@@ -58,9 +55,8 @@ async def get_protocol_recommendation(
         Protocol recommendation with drugs, dosages, and confidence level
     """
     try:
-        recommendation = recommend_initial_protocol_sync(
+        recommendation = recommend_initial_protocol(
             shipment_id=shipment_id,
-            db=db,
             supabase=supabase
         )
         return recommendation

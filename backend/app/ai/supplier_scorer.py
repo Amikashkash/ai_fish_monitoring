@@ -8,17 +8,15 @@ This module analyzes all supplier/source performance data to provide
 reliability rankings and purchasing recommendations.
 """
 
-from typing import List, Dict
-from sqlalchemy.orm import Session
+from typing import List
+from supabase import Client
 
 from app.ai.client import get_ai_client, get_default_model, get_default_max_tokens
 from app.ai.prompts import SYSTEM_PROMPT_SUPPLIER, build_supplier_scoring_prompt
-from app.crud import ai_knowledge
 from app.schemas.recommendation import SupplierScore
-from app.services.supplier_analyzer import analyze_supplier_performance
 
 
-async def score_suppliers(db: Session) -> List[SupplierScore]:
+def score_suppliers(supabase: Client) -> List[SupplierScore]:
     """
     Score and rank all suppliers based on historical performance.
 
@@ -26,18 +24,19 @@ async def score_suppliers(db: Session) -> List[SupplierScore]:
     to provide comprehensive supplier reliability scores.
 
     Args:
-        db: Database session
+        supabase: Supabase client
 
     Returns:
         List of SupplierScore objects, ranked by reliability
 
     Example:
-        >>> scores = await score_suppliers(db)
+        >>> scores = score_suppliers(supabase)
         >>> for score in scores:
         ...     print(f"{score.source_country}: {score.overall_score}/100")
     """
-    # Get all knowledge entries
-    all_knowledge = ai_knowledge.get_all_knowledge(db)
+    # Get all knowledge entries from Supabase
+    response = supabase.table("ai_knowledge").select("*").execute()
+    all_knowledge = response.data if response.data else []
 
     if not all_knowledge:
         return []
@@ -45,16 +44,20 @@ async def score_suppliers(db: Session) -> List[SupplierScore]:
     # Group by supplier
     supplier_data = {}
     for k in all_knowledge:
-        if k.source_country not in supplier_data:
-            supplier_data[k.source_country] = []
-        supplier_data[k.source_country].append(k)
+        country = k.get("source_country", "Unknown")
+        if country not in supplier_data:
+            supplier_data[country] = []
+        supplier_data[country].append(k)
 
     # Build prompt data
     prompt_data_lines = ["Supplier Performance Summary:"]
     for supplier, knowledge_list in supplier_data.items():
-        total_shipments = sum(k.sample_size for k in knowledge_list)
-        avg_success = sum(k.success_rate * k.sample_size for k in knowledge_list) / total_shipments if total_shipments > 0 else 0
-        
+        total_shipments = sum(k.get("sample_size", 0) for k in knowledge_list)
+        avg_success = (
+            sum(k.get("success_rate", 0) * k.get("sample_size", 0) for k in knowledge_list) / total_shipments
+            if total_shipments > 0 else 0
+        )
+
         prompt_data_lines.append(f"\n{supplier}:")
         prompt_data_lines.append(f"  Total Shipments: {total_shipments}")
         prompt_data_lines.append(f"  Average Success Rate: {avg_success:.1f}%")
@@ -79,15 +82,16 @@ async def score_suppliers(db: Session) -> List[SupplierScore]:
     # Build supplier scores
     scores = []
     for supplier, knowledge_list in supplier_data.items():
-        total_shipments = sum(k.sample_size for k in knowledge_list)
-        avg_success = sum(k.success_rate * k.sample_size for k in knowledge_list) / total_shipments if total_shipments > 0 else 0
-        
-        # Simple scoring algorithm
+        total_shipments = sum(k.get("sample_size", 0) for k in knowledge_list)
+        avg_success = (
+            sum(k.get("success_rate", 0) * k.get("sample_size", 0) for k in knowledge_list) / total_shipments
+            if total_shipments > 0 else 0
+        )
+
         overall_score = min(100, int(avg_success))
-        
-        # Best performing species
-        best_species = sorted(knowledge_list, key=lambda k: k.success_rate, reverse=True)[:3]
-        best_species_list = [k.scientific_name for k in best_species]
+
+        best_species = sorted(knowledge_list, key=lambda k: k.get("success_rate", 0), reverse=True)[:3]
+        best_species_list = [k.get("scientific_name", "") for k in best_species]
 
         scores.append(SupplierScore(
             source_country=supplier,
@@ -102,20 +106,3 @@ async def score_suppliers(db: Session) -> List[SupplierScore]:
     # Sort by score
     scores.sort(key=lambda s: s.overall_score, reverse=True)
     return scores
-
-
-def score_suppliers_sync(db: Session) -> List[SupplierScore]:
-    """
-    Synchronous version of score_suppliers.
-
-    Args:
-        db: Database session
-
-    Returns:
-        List of supplier scores
-
-    Example:
-        >>> scores = score_suppliers_sync(db)
-    """
-    import asyncio
-    return asyncio.run(score_suppliers(db))

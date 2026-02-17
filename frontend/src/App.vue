@@ -4,8 +4,11 @@
       <h1>Fish Monitor</h1>
       <nav class="nav-tabs">
         <router-link to="/" class="nav-tab">Home</router-link>
-        <router-link to="/shipments" class="nav-tab">Shipments</router-link>
+        <router-link to="/daily" class="nav-tab nav-highlight">Daily Rounds</router-link>
+        <router-link to="/shipments-list" class="nav-tab">Shipments</router-link>
+        <router-link to="/import" class="nav-tab">Import Invoice</router-link>
         <router-link to="/treatments" class="nav-tab">Treatments</router-link>
+        <router-link to="/protocols" class="nav-tab">Drug Protocols</router-link>
         <router-link to="/suppliers" class="nav-tab">Suppliers</router-link>
       </nav>
     </header>
@@ -53,6 +56,12 @@ export default {
 .nav-tab:hover,
 .nav-tab.router-link-active {
   background: rgba(255,255,255,0.3);
+}
+
+.nav-highlight {
+  background: rgba(255,255,255,0.35);
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.5);
 }
 
 .app-main {

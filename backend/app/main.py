@@ -37,7 +37,8 @@ app = FastAPI(
     description="AI-powered fish acclimation tracking and treatment recommendations",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    redirect_slashes=False
 )
 
 # Configure CORS

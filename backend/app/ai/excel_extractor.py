@@ -189,8 +189,18 @@ Important guidelines:
         return extracted_data
 
     except Exception as e:
+        error_str = str(e)
+        # Return user-friendly messages for known API errors
+        if "overloaded_error" in error_str or "529" in error_str:
+            user_message = "The AI service is temporarily overloaded. Please wait a moment and try again."
+        elif "rate_limit" in error_str or "429" in error_str:
+            user_message = "Rate limit reached. Please wait a minute and try again."
+        elif "authentication" in error_str.lower() or "401" in error_str:
+            user_message = "AI service authentication failed. Please check your API key."
+        else:
+            user_message = "AI extraction failed. Please try again."
         return {
-            "error": str(e),
+            "error": user_message,
             "file_name": file.filename,
             "extraction_method": "failed"
         }

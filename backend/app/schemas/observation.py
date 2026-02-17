@@ -41,6 +41,8 @@ class ObservationBase(BaseModel):
     symptoms_other: Optional[str] = None
 
     treatments_completed: bool = False
+    dead_fish_count: Optional[int] = Field(None, ge=0, description="Number of fish found dead today")
+    condition_trend: Optional[str] = Field(None, description="progress / same / regress")
     notes: Optional[str] = None
 
     @field_validator('overall_condition_score')
@@ -110,7 +112,7 @@ class ObservationResponse(ObservationBase):
     """
 
     id: int
-    created_at: Optional[Date] = None
+    created_at: Optional[str] = None
 
     class Config:
         """Pydantic config for ORM mode."""

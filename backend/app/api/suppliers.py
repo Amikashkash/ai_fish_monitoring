@@ -1,18 +1,18 @@
-"""Supplier scoring API endpoints."""
+"""Supplier scoring API endpoints using Supabase REST API."""
 
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from supabase import Client
 
-from app.api.dependencies import get_db
+from app.config.supabase_client import get_supabase
 from app.schemas.recommendation import SupplierScore
-from app.ai.supplier_scorer import score_suppliers_sync
+from app.ai.supplier_scorer import score_suppliers
 
 router = APIRouter(prefix="/api/suppliers", tags=["suppliers"])
 
 
 @router.get("/scores", response_model=List[SupplierScore])
-async def get_supplier_scores(db: Session = Depends(get_db)):
+async def get_supplier_scores(supabase: Client = Depends(get_supabase)):
     """
     Get reliability scores for all suppliers.
 
@@ -26,7 +26,7 @@ async def get_supplier_scores(db: Session = Depends(get_db)):
         List of supplier scores, sorted by reliability (best first)
     """
     try:
-        scores = score_suppliers_sync(db)
+        scores = score_suppliers(supabase)
         return scores
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scoring failed: {str(e)}")
