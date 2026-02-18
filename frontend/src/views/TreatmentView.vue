@@ -87,6 +87,13 @@
           <span v-if="t.invoiceNumber"> · #{{ t.invoiceNumber }}</span>
         </div>
 
+        <!-- Outcome summary (completed treatments) -->
+        <div v-if="t.status === 'completed' && t.outcome" class="outcome-summary">
+          <span class="outcome-label" :class="t.outcome">{{ outcomeLabel(t.outcome) }}</span>
+          <span v-if="t.outcome_score" class="outcome-stars">{{ '★'.repeat(t.outcome_score) }}{{ '☆'.repeat(5 - t.outcome_score) }}</span>
+          <span v-if="t.total_mortality" class="outcome-mortality">{{ t.total_mortality }} dead</span>
+        </div>
+
         <!-- Actions -->
         <div class="card-actions">
           <router-link :to="`/checklist/${t.id}`" class="btn btn-obs">
@@ -109,10 +116,10 @@
           </button>
           <button
             v-if="t.status === 'active'"
-            @click="complete(t)"
+            @click="openGraduate(t)"
             class="btn btn-complete"
           >
-            Mark Complete
+            Graduate Fish
           </button>
         </div>
 
@@ -196,6 +203,71 @@
       <router-link to="/shipments-list" class="btn btn-obs" style="display:inline-block;margin-top:1rem;">
         Go to Shipments
       </router-link>
+    </div>
+
+    <!-- Graduate Modal -->
+    <div v-if="graduateTarget" class="modal-backdrop" @click.self="graduateTarget = null">
+      <div class="modal">
+        <h3>Graduate Fish</h3>
+        <p class="modal-sub">
+          {{ graduateTarget.commonName || graduateTarget.scientificName }}
+          · {{ graduateTarget.daysActive }} days in quarantine
+        </p>
+
+        <div class="grad-form">
+          <div class="grad-field">
+            <label>End Date</label>
+            <input v-model="graduateForm.end_date" type="date" :max="TODAY" />
+          </div>
+
+          <div class="grad-field">
+            <label>Overall Outcome</label>
+            <select v-model="graduateForm.outcome">
+              <option value="">Select outcome...</option>
+              <option value="healthy">Excellent – All fish healthy</option>
+              <option value="minor_loss">Good – Minor losses (&lt; 10%)</option>
+              <option value="major_loss">Fair – Significant losses (10–30%)</option>
+              <option value="total_loss">Poor – Major losses (&gt; 30%)</option>
+            </select>
+          </div>
+
+          <div class="grad-field">
+            <label>Final Score</label>
+            <div class="star-rating">
+              <button
+                v-for="n in 5" :key="n"
+                @click="graduateForm.outcome_score = n"
+                :class="{ filled: n <= graduateForm.outcome_score }"
+                class="star-btn"
+              >★</button>
+            </div>
+          </div>
+
+          <div class="grad-field">
+            <label>Total Fish Died (whole period)</label>
+            <input v-model.number="graduateForm.total_mortality" type="number" min="0" :max="graduateTarget.quantity" placeholder="0" />
+          </div>
+
+          <div class="grad-field">
+            <label>Notes for AI / future reference</label>
+            <textarea v-model="graduateForm.outcome_notes" rows="3" placeholder="What worked, what didn't, any observations..."></textarea>
+          </div>
+        </div>
+
+        <p class="grad-hint">This removes the fish from active monitoring. All observation history is preserved.</p>
+
+        <div class="modal-actions">
+          <button
+            class="btn-graduate"
+            @click="doGraduate"
+            :disabled="graduating || !graduateForm.outcome || !graduateForm.outcome_score"
+          >
+            {{ graduating ? "Saving..." : "Confirm Graduation" }}
+          </button>
+          <button class="btn-cancel-grad" @click="graduateTarget = null">Cancel</button>
+        </div>
+        <p v-if="graduateError" class="grad-error">{{ graduateError }}</p>
+      </div>
     </div>
   </div>
 </template>
@@ -283,14 +355,52 @@ export default {
       })
     );
 
-    const complete = async (t) => {
-      const name = t.commonName || t.scientificName || `Treatment #${t.id}`;
-      if (!confirm(`Mark treatment for ${name} as complete?`)) return;
+    const TODAY = new Date().toISOString().slice(0, 10);
+
+    const outcomeLabel = (o) => ({
+      healthy:    "Excellent – All healthy",
+      minor_loss: "Good – Minor losses",
+      major_loss: "Fair – Significant losses",
+      total_loss: "Poor – Major losses",
+    }[o] || o);
+
+    // Graduate modal state
+    const graduateTarget = ref(null);
+    const graduateForm = ref({ end_date: "", outcome: "", outcome_score: 0, total_mortality: 0, outcome_notes: "" });
+    const graduating = ref(false);
+    const graduateError = ref("");
+
+    const openGraduate = (t) => {
+      graduateTarget.value = t;
+      graduateError.value = "";
+      graduateForm.value = {
+        end_date: TODAY,
+        outcome: "",
+        outcome_score: 0,
+        total_mortality: 0,
+        outcome_notes: "",
+      };
+    };
+
+    const doGraduate = async () => {
+      if (!graduateForm.value.outcome || !graduateForm.value.outcome_score) return;
+      graduating.value = true;
+      graduateError.value = "";
       try {
-        await treatmentsAPI.complete(t.id);
+        await treatmentsAPI.update(graduateTarget.value.id, {
+          status: "completed",
+          end_date: graduateForm.value.end_date,
+          outcome: graduateForm.value.outcome,
+          outcome_score: graduateForm.value.outcome_score,
+          total_mortality: graduateForm.value.total_mortality || 0,
+          outcome_notes: graduateForm.value.outcome_notes || null,
+        });
+        graduateTarget.value = null;
         await load();
       } catch (e) {
-        alert("Failed to mark treatment as complete.");
+        graduateError.value = e.response?.data?.detail || "Failed to graduate treatment.";
+      } finally {
+        graduating.value = false;
       }
     };
 
@@ -385,7 +495,9 @@ export default {
     onMounted(load);
 
     return {
-      loading, showAll, enriched, load, complete,
+      loading, showAll, enriched, load,
+      TODAY, outcomeLabel,
+      graduateTarget, graduateForm, graduating, graduateError, openGraduate, doGraduate,
       expandedId, drugForm, drugSaving, drugError,
       allProtocols, protocolMap, toggleEdit, addDrug, removeDrug,
       detailsId, detailsForm, detailsSaving, detailsError, detailsSaved,
@@ -802,4 +914,79 @@ export default {
   font-weight: 600;
   margin: 0.4rem 0 0 0;
 }
+
+/* Outcome summary row */
+.outcome-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.75rem;
+  background: #f0fdf4;
+  border-radius: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.outcome-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.outcome-label.healthy    { color: #15803d; }
+.outcome-label.minor_loss { color: #0369a1; }
+.outcome-label.major_loss { color: #b45309; }
+.outcome-label.total_loss { color: #b91c1c; }
+.outcome-stars { color: #f59e0b; font-size: 0.95rem; letter-spacing: 0.05em; }
+.outcome-mortality { font-size: 0.8rem; color: #dc2626; margin-left: auto; }
+
+/* Graduate modal */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 1rem;
+}
+.modal {
+  background: white; border-radius: 0.75rem; padding: 1.75rem;
+  width: 100%; max-width: 460px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h3 { font-size: 1.2rem; color: #1e293b; margin: 0 0 0.3rem; }
+.modal-sub { font-size: 0.88rem; color: #64748b; margin: 0 0 1.25rem; }
+
+.grad-form { display: flex; flex-direction: column; gap: 1rem; }
+.grad-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.grad-field label { font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.grad-field input, .grad-field select, .grad-field textarea {
+  padding: 0.5rem 0.65rem; border: 1px solid #e2e8f0; border-radius: 0.4rem;
+  font-size: 0.9rem; background: white; color: #1e293b;
+  font-family: inherit;
+}
+.grad-field input:focus, .grad-field select:focus, .grad-field textarea:focus {
+  outline: none; border-color: #0ea5e9;
+}
+.grad-field textarea { resize: vertical; }
+
+.star-rating { display: flex; gap: 0.25rem; }
+.star-btn {
+  background: none; border: none; font-size: 1.6rem;
+  cursor: pointer; color: #d1d5db; transition: color 0.1s; padding: 0; line-height: 1;
+}
+.star-btn.filled { color: #f59e0b; }
+.star-btn:hover { color: #f59e0b; }
+
+.grad-hint {
+  font-size: 0.8rem; color: #94a3b8; margin: 1rem 0 0; font-style: italic;
+}
+
+.modal-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+.btn-graduate {
+  flex: 1; background: #10b981; color: white; border: none;
+  padding: 0.65rem 1rem; border-radius: 0.5rem; cursor: pointer;
+  font-weight: 700; font-size: 0.95rem;
+}
+.btn-graduate:hover:not(:disabled) { background: #059669; }
+.btn-graduate:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel-grad {
+  flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;
+  padding: 0.65rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.9rem;
+}
+.btn-cancel-grad:hover { background: #e2e8f0; }
+.grad-error { font-size: 0.85rem; color: #dc2626; margin: 0.5rem 0 0; }
 </style>

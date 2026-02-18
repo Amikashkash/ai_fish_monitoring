@@ -116,6 +116,11 @@ class TreatmentUpdate(BaseModel):
     start_date: Optional[Date] = None
     end_date: Optional[Date] = None
     status: Optional[str] = Field(None, pattern="^(active|completed|modified)$")
+    # Outcome fields — captured at graduation
+    outcome: Optional[str] = Field(None, description="healthy | minor_loss | major_loss | total_loss")
+    outcome_score: Optional[int] = Field(None, ge=1, le=5, description="1=very poor to 5=excellent")
+    total_mortality: Optional[int] = Field(None, ge=0, description="Total fish found dead during treatment")
+    outcome_notes: Optional[str] = None
 
 
 class TreatmentResponse(TreatmentBase):
@@ -135,6 +140,11 @@ class TreatmentResponse(TreatmentBase):
     id: int
     created_at: Optional[str] = None
     drugs: List[TreatmentDrugResponse] = Field(default_factory=list)
+    # Outcome fields (populated after graduation)
+    outcome: Optional[str] = None
+    outcome_score: Optional[int] = None
+    total_mortality: Optional[int] = None
+    outcome_notes: Optional[str] = None
 
     class Config:
         """Pydantic config for ORM mode."""
