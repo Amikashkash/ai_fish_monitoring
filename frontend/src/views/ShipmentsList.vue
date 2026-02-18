@@ -180,6 +180,16 @@
           <div class="form-section">
             <div class="form-row">
               <div class="form-group">
+                <label>Tank / Aquarium #</label>
+                <input v-model="editForm.aquarium_number" type="text" class="form-input" placeholder="e.g. Tank 3, QT-1" />
+              </div>
+              <div class="form-group">
+                <label>Tank Volume (Liters)</label>
+                <input v-model.number="editForm.aquarium_volume_liters" type="number" min="1" class="form-input" placeholder="e.g. 200" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
                 <label>Arrival Date</label>
                 <input v-model="editForm.date" type="date" class="form-input" />
               </div>
@@ -338,6 +348,8 @@ export default {
       this.editTarget = shipment;
       this.editError = "";
       this.editForm = {
+        aquarium_number: shipment.aquarium_number || "",
+        aquarium_volume_liters: shipment.aquarium_volume_liters > 1 ? shipment.aquarium_volume_liters : null,
         date: shipment.date || "",
         scientific_name: shipment.scientific_name || "",
         common_name: shipment.common_name || "",
