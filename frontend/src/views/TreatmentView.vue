@@ -96,6 +96,13 @@
             {{ expandedId === t.id ? "Done Editing" : "Edit Drugs" }}
           </button>
           <button
+            @click="toggleDetails(t)"
+            class="btn btn-edit-details"
+            :class="{ active: detailsId === t.id }"
+          >
+            {{ detailsId === t.id ? "Cancel" : "Edit Details" }}
+          </button>
+          <button
             v-if="t.status === 'active'"
             @click="complete(t)"
             class="btn btn-complete"
@@ -144,6 +151,33 @@
             </button>
           </div>
           <p v-if="drugError" class="drug-error">{{ drugError }}</p>
+        </div>
+
+        <!-- Inline details editor -->
+        <div v-if="detailsId === t.id" class="details-editor">
+          <div class="drug-editor-title">Aquarium Details</div>
+          <div class="details-grid">
+            <div class="details-field">
+              <label>Aquarium #</label>
+              <input v-model="detailsForm.aquarium_number" type="text" placeholder="e.g. A-12" />
+            </div>
+            <div class="details-field">
+              <label>Tank Volume (L)</label>
+              <input v-model.number="detailsForm.aquarium_volume_liters" type="number" step="1" min="0" placeholder="e.g. 200" />
+            </div>
+            <div class="details-field">
+              <label>Fish Count</label>
+              <input v-model.number="detailsForm.quantity" type="number" min="0" placeholder="e.g. 50" />
+            </div>
+          </div>
+          <div class="details-actions">
+            <button class="btn-save-details" :disabled="detailsSaving" @click="saveDetails(t)">
+              {{ detailsSaving ? "Saving..." : "Save" }}
+            </button>
+            <button class="btn-cancel-details" @click="detailsId = null">Cancel</button>
+          </div>
+          <p v-if="detailsError" class="drug-error">{{ detailsError }}</p>
+          <p v-if="detailsSaved" class="details-saved">Saved!</p>
         </div>
       </div>
     </div>
@@ -281,12 +315,57 @@ export default {
       }
     };
 
+    // Details editor state
+    const detailsId = ref(null);
+    const detailsForm = ref({ aquarium_number: "", aquarium_volume_liters: null, quantity: null });
+    const detailsSaving = ref(false);
+    const detailsError = ref("");
+    const detailsSaved = ref(false);
+
+    const toggleDetails = (t) => {
+      if (detailsId.value === t.id) {
+        detailsId.value = null;
+        return;
+      }
+      detailsId.value = t.id;
+      detailsError.value = "";
+      detailsSaved.value = false;
+      const s = shipmentMap.value[t.shipment_id] || {};
+      detailsForm.value = {
+        aquarium_number: s.aquarium_number || "",
+        aquarium_volume_liters: s.aquarium_volume_liters || null,
+        quantity: s.quantity || null,
+      };
+    };
+
+    const saveDetails = async (t) => {
+      detailsSaving.value = true;
+      detailsError.value = "";
+      detailsSaved.value = false;
+      try {
+        const patch = {};
+        if (detailsForm.value.aquarium_number !== "") patch.aquarium_number = detailsForm.value.aquarium_number;
+        if (detailsForm.value.aquarium_volume_liters != null) patch.aquarium_volume_liters = detailsForm.value.aquarium_volume_liters;
+        if (detailsForm.value.quantity != null) patch.quantity = detailsForm.value.quantity;
+        await shipmentsAPI.update(t.shipment_id, patch);
+        await load();
+        detailsSaved.value = true;
+        setTimeout(() => { detailsSaved.value = false; detailsId.value = null; }, 1200);
+      } catch (e) {
+        detailsError.value = e.response?.data?.detail || "Failed to save details.";
+      } finally {
+        detailsSaving.value = false;
+      }
+    };
+
     onMounted(load);
 
     return {
       loading, showAll, enriched, load, complete,
       expandedId, drugForm, drugSaving, drugError,
       allProtocols, protocolMap, toggleEdit, addDrug, removeDrug,
+      detailsId, detailsForm, detailsSaving, detailsError, detailsSaved,
+      toggleDetails, saveDetails,
     };
   }
 };
@@ -598,6 +677,93 @@ export default {
 .drug-error {
   font-size: 0.82rem;
   color: #dc2626;
+  margin: 0.4rem 0 0 0;
+}
+
+/* Details editor */
+.btn-edit-details {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.btn-edit-details:hover { background: #dcfce7; }
+.btn-edit-details.active { background: #dcfce7; border-color: #86efac; }
+
+.details-editor {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.details-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.details-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.details-field input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  background: white;
+}
+
+.details-field input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+
+.details-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-save-details {
+  padding: 0.45rem 1rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-save-details:hover:not(:disabled) { background: #059669; }
+.btn-save-details:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-cancel-details {
+  padding: 0.45rem 0.9rem;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.btn-cancel-details:hover { background: #e2e8f0; }
+
+.details-saved {
+  font-size: 0.82rem;
+  color: #10b981;
+  font-weight: 600;
   margin: 0.4rem 0 0 0;
 }
 </style>
