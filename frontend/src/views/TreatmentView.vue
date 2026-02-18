@@ -76,6 +76,11 @@
           >{{ name }}</span>
         </div>
 
+        <!-- Protocol completion alert -->
+        <div v-if="t.protocolDue" class="protocol-due-alert">
+          ✓ Protocol complete — {{ t.daysActive }} of {{ t.maxProtocolDays }} days done. Ready to mark as complete?
+        </div>
+
         <!-- Supplier / invoice footnote -->
         <div v-if="t.supplierName || t.invoiceNumber" class="footnote">
           <span v-if="t.supplierName">{{ t.supplierName }}</span>
@@ -252,6 +257,13 @@ export default {
           return p?.name || p?.drug_name || `Protocol #${d.drug_protocol_id}`;
         });
 
+        const days = daysActive(t);
+        const protocolDays = (t.drugs || [])
+          .map(d => protocolMap.value[d.drug_protocol_id]?.typical_treatment_period_days)
+          .filter(d => d != null);
+        const maxProtocolDays = protocolDays.length ? Math.max(...protocolDays) : null;
+        const protocolDue = t.status === "active" && maxProtocolDays != null && days >= maxProtocolDays;
+
         return {
           ...t,
           commonName: s.common_name,
@@ -263,7 +275,9 @@ export default {
           invoiceNumber: s.invoice_number,
           volumeLabel: vol && vol > 1 ? `${vol} L` : "—",
           densityLabel: density ? `${density} fish/L` : "—",
-          daysActive: daysActive(t),
+          daysActive: days,
+          maxProtocolDays,
+          protocolDue,
           protocolNames,
         };
       })
@@ -519,6 +533,18 @@ export default {
   padding: 0.2rem 0.55rem;
   border-radius: 0.35rem;
   font-weight: 500;
+}
+
+/* Protocol due alert */
+.protocol-due-alert {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #854d0e;
+  margin-bottom: 0.75rem;
 }
 
 /* Footnote */
