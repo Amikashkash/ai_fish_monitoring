@@ -27,6 +27,7 @@ export const treatmentsAPI = {
   create: (data) => apiClient.post("/api/treatments/", data),
   getById: (id) => apiClient.get(`/api/treatments/${id}`),
   list: (activeOnly = false) => apiClient.get("/api/treatments/", { params: { active_only: activeOnly } }),
+  update: (id, data) => apiClient.patch(`/api/treatments/${id}`, data),
   complete: (id) => apiClient.post(`/api/treatments/${id}/complete`),
   addDrug: (treatmentId, data) => apiClient.post(`/api/treatments/${treatmentId}/drugs`, data),
   removeDrug: (treatmentId, drugId) => apiClient.delete(`/api/treatments/${treatmentId}/drugs/${drugId}`)

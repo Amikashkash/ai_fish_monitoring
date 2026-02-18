@@ -169,6 +169,10 @@
               <label>Fish Count</label>
               <input v-model.number="detailsForm.quantity" type="number" min="0" placeholder="e.g. 50" />
             </div>
+            <div class="details-field">
+              <label>Treatment Started</label>
+              <input v-model="detailsForm.start_date" type="date" :max="new Date().toISOString().slice(0,10)" />
+            </div>
           </div>
           <div class="details-actions">
             <button class="btn-save-details" :disabled="detailsSaving" @click="saveDetails(t)">
@@ -194,6 +198,8 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import { treatmentsAPI, shipmentsAPI, protocolsAPI } from "../api/client";
+
+const toInputDate = (d) => d ? d.slice(0, 10) : "";
 
 export default {
   name: "TreatmentView",
@@ -317,7 +323,7 @@ export default {
 
     // Details editor state
     const detailsId = ref(null);
-    const detailsForm = ref({ aquarium_number: "", aquarium_volume_liters: null, quantity: null });
+    const detailsForm = ref({ aquarium_number: "", aquarium_volume_liters: null, quantity: null, start_date: "" });
     const detailsSaving = ref(false);
     const detailsError = ref("");
     const detailsSaved = ref(false);
@@ -335,6 +341,7 @@ export default {
         aquarium_number: s.aquarium_number || "",
         aquarium_volume_liters: s.aquarium_volume_liters || null,
         quantity: s.quantity || null,
+        start_date: toInputDate(t.start_date),
       };
     };
 
@@ -348,6 +355,9 @@ export default {
         if (detailsForm.value.aquarium_volume_liters != null) patch.aquarium_volume_liters = detailsForm.value.aquarium_volume_liters;
         if (detailsForm.value.quantity != null) patch.quantity = detailsForm.value.quantity;
         await shipmentsAPI.update(t.shipment_id, patch);
+        if (detailsForm.value.start_date) {
+          await treatmentsAPI.update(t.id, { start_date: detailsForm.value.start_date });
+        }
         await load();
         detailsSaved.value = true;
         setTimeout(() => { detailsSaved.value = false; detailsId.value = null; }, 1200);

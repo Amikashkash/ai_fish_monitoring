@@ -113,6 +113,7 @@ class TreatmentUpdate(BaseModel):
         ... )
     """
 
+    start_date: Optional[Date] = None
     end_date: Optional[Date] = None
     status: Optional[str] = Field(None, pattern="^(active|completed|modified)$")
 

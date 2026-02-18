@@ -6,7 +6,7 @@ from supabase import Client
 from datetime import date
 
 from app.config.supabase_client import get_supabase
-from app.schemas.treatment import TreatmentCreate, TreatmentResponse, TreatmentDrugCreate
+from app.schemas.treatment import TreatmentCreate, TreatmentResponse, TreatmentDrugCreate, TreatmentUpdate
 
 router = APIRouter(prefix="/api/treatments", tags=["treatments"])
 
@@ -89,6 +89,30 @@ async def create_treatment(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create treatment: {str(e)}")
+
+
+@router.patch("/{treatment_id}", response_model=TreatmentResponse)
+async def update_treatment(
+    treatment_id: int,
+    update: TreatmentUpdate,
+    supabase: Client = Depends(get_supabase)
+):
+    """Update treatment fields (start_date, end_date, status)."""
+    try:
+        patch = {k: v.isoformat() if hasattr(v, "isoformat") else v
+                 for k, v in update.model_dump(exclude_none=True).items()}
+        if not patch:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        response = supabase.table("treatments").update(patch).eq("id", treatment_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Treatment not found")
+        result = response.data[0]
+        result["drugs"] = []
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update treatment: {str(e)}")
 
 
 @router.post("/{treatment_id}/drugs", status_code=201)

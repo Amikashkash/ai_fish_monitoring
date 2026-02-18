@@ -14,6 +14,11 @@
 
     <form @submit.prevent="handleSubmit" class="obs-form">
       <div class="form-group">
+        <label>Observation Date</label>
+        <input v-model="form.observation_date" type="date" :max="TODAY" required />
+      </div>
+
+      <div class="form-group">
         <label>Overall Condition (1–5)</label>
         <input v-model.number="form.overall_condition_score" type="number" min="1" max="5" required />
       </div>
@@ -27,6 +32,7 @@
           <label class="sym"><input type="checkbox" v-model="form.symptoms_fin_damage" /> Fin Damage</label>
           <label class="sym"><input type="checkbox" v-model="form.symptoms_breathing_issues" /> Breathing Issues</label>
         </div>
+        <input v-model="form.symptoms_other" type="text" class="other-symptoms" placeholder="Other symptoms (optional)" />
       </div>
 
       <div class="form-group">
@@ -77,13 +83,15 @@ export default {
       symptoms_fin_damage: false,
       symptoms_breathing_issues: false,
       treatments_completed: true,
+      symptoms_other: "",
       notes: ""
     });
 
     const dayNum = computed(() => {
-      if (!startDate.value) return "?";
+      if (!startDate.value || !form.value.observation_date) return "?";
       const start = new Date(startDate.value);
-      return Math.max(1, Math.floor((new Date() - start) / 86400000) + 1);
+      const obs = new Date(form.value.observation_date);
+      return Math.max(1, Math.floor((obs - start) / 86400000) + 1);
     });
 
     onMounted(async () => {
@@ -113,7 +121,7 @@ export default {
       }
     };
 
-    return { form, submitting, error, fishName, scientificName, dayNum };
+    return { form, submitting, error, fishName, scientificName, dayNum, TODAY };
   }
 };
 </script>
@@ -160,6 +168,7 @@ export default {
   margin-bottom: 0.4rem;
 }
 
+.form-group input[type="date"],
 .form-group input[type="number"],
 .form-group textarea {
   width: 100%;
@@ -171,6 +180,7 @@ export default {
   box-sizing: border-box;
 }
 
+.form-group input[type="date"]:focus,
 .form-group input[type="number"]:focus,
 .form-group textarea:focus {
   outline: none;
@@ -190,6 +200,16 @@ export default {
   font-size: 0.9rem;
   color: #374151;
   cursor: pointer;
+}
+
+.other-symptoms {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  box-sizing: border-box;
 }
 
 .dose-label {
