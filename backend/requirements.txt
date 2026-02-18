@@ -11,8 +11,8 @@ psycopg2-binary==2.9.9
 supabase==2.3.4
 
 # Data Validation
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic==2.10.6
+pydantic-settings==2.7.1
 
 # AI Integration
 anthropic==0.18.1
