@@ -79,7 +79,12 @@
     <div v-if="deleteTarget" class="modal-backdrop" @click.self="deleteTarget = null">
       <div class="modal">
         <h3>Delete Shipment?</h3>
-        <p class="modal-fish">{{ deleteTarget.scientific_name }} — {{ deleteTarget.quantity }} fish</p>
+        <p class="modal-fish">
+          <span v-if="deleteTarget.common_name && deleteTarget.common_name !== deleteTarget.scientific_name">
+            {{ deleteTarget.common_name }} —
+          </span>
+          <em>{{ deleteTarget.scientific_name }}</em> — {{ deleteTarget.quantity }} fish
+        </p>
         <p class="modal-warn">This cannot be undone. Use this for DOA, shipping problems, or data entry errors.</p>
         <div class="modal-reason">
           <label>Reason (optional)</label>
@@ -106,7 +111,12 @@
     <div v-if="treatTarget" class="modal-backdrop" @click.self="closeTreatModal">
       <div class="modal modal-wide">
         <h3>Start Treatment</h3>
-        <p class="modal-fish">{{ treatTarget.scientific_name }} — {{ treatTarget.quantity }} fish</p>
+        <p class="modal-fish">
+          <span v-if="treatTarget.common_name && treatTarget.common_name !== treatTarget.scientific_name">
+            {{ treatTarget.common_name }} —
+          </span>
+          <em>{{ treatTarget.scientific_name }}</em> — {{ treatTarget.quantity }} fish
+        </p>
 
         <div class="treat-form">
           <!-- Aquarium assignment -->

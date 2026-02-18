@@ -39,7 +39,17 @@ async def create_observation(
         if observation.notes:
             data["notes"] = observation.notes
 
-        response = supabase.table("daily_observations").insert(data).execute()
+        try:
+            response = supabase.table("daily_observations").insert(data).execute()
+        except Exception as first_err:
+            if "PGRST204" in str(first_err):
+                # New columns not yet in DB — strip them and retry
+                for col in ("dead_fish_count", "condition_trend"):
+                    data.pop(col, None)
+                response = supabase.table("daily_observations").insert(data).execute()
+            else:
+                raise first_err
+
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to create observation")
         return response.data[0]
