@@ -63,6 +63,7 @@
 
           <div class="card-actions">
             <button class="btn-treat" @click="openTreatModal(s)">Start Treatment</button>
+            <button class="btn-edit" @click="openEditModal(s)" title="Edit shipment details">Edit</button>
             <button class="btn-delete" @click="confirmDelete(s)" title="Delete (DOA / shipping issue)">Delete</button>
           </div>
         </div>
@@ -168,6 +169,66 @@
         <p v-if="treatError" class="error-msg">{{ treatError }}</p>
       </div>
     </div>
+    <!-- Edit Shipment Modal -->
+    <div v-if="editTarget" class="modal-backdrop" @click.self="editTarget = null">
+      <div class="modal modal-wide">
+        <h3>Edit Shipment</h3>
+        <p class="modal-fish">
+          <em>{{ editTarget.scientific_name }}</em>
+        </p>
+        <div class="treat-form">
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Arrival Date</label>
+                <input v-model="editForm.date" type="date" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Source Country</label>
+                <input v-model="editForm.source" type="text" class="form-input" placeholder="e.g. Thailand" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Scientific Name</label>
+                <input v-model="editForm.scientific_name" type="text" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Common Name</label>
+                <input v-model="editForm.common_name" type="text" class="form-input" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Quantity</label>
+                <input v-model.number="editForm.quantity" type="number" min="1" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Fish Size</label>
+                <input v-model="editForm.fish_size" type="text" class="form-input" placeholder="e.g. 3-5cm" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Supplier</label>
+                <input v-model="editForm.supplier_name" type="text" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Invoice #</label>
+                <input v-model="editForm.invoice_number" type="text" class="form-input" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-treat-confirm" @click="doEdit" :disabled="editing">
+            {{ editing ? 'Saving...' : 'Save Changes' }}
+          </button>
+          <button class="btn-cancel" @click="editTarget = null">Cancel</button>
+        </div>
+        <p v-if="editError" class="error-msg">{{ editError }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -199,7 +260,12 @@ export default {
         start_date: new Date().toISOString().split("T")[0]
       },
       treating: false,
-      treatError: ""
+      treatError: "",
+      // Edit
+      editTarget: null,
+      editForm: {},
+      editing: false,
+      editError: ""
     };
   },
   mounted() {
@@ -267,6 +333,40 @@ export default {
       this.treatTarget = null;
       this.treatError = "";
     },
+    // ── Edit ──
+    openEditModal(shipment) {
+      this.editTarget = shipment;
+      this.editError = "";
+      this.editForm = {
+        date: shipment.date || "",
+        scientific_name: shipment.scientific_name || "",
+        common_name: shipment.common_name || "",
+        source: shipment.source || "",
+        quantity: shipment.quantity,
+        fish_size: shipment.fish_size || "",
+        supplier_name: shipment.supplier_name || "",
+        invoice_number: shipment.invoice_number || "",
+      };
+    },
+    async doEdit() {
+      this.editing = true;
+      this.editError = "";
+      try {
+        const patch = {};
+        for (const [k, v] of Object.entries(this.editForm)) {
+          if (v !== "" && v != null) patch[k] = v;
+        }
+        await shipmentsAPI.update(this.editTarget.id, patch);
+        const idx = this.shipments.findIndex(s => s.id === this.editTarget.id);
+        if (idx >= 0) Object.assign(this.shipments[idx], patch);
+        this.editTarget = null;
+      } catch (e) {
+        this.editError = e.response?.data?.detail || "Failed to save changes.";
+      } finally {
+        this.editing = false;
+      }
+    },
+
     async doStartTreatment() {
       if (!this.treatForm.aquarium_number || !this.treatForm.aquarium_volume_liters) return;
       this.treating = true;
@@ -337,6 +437,8 @@ export default {
 .card-actions { display: flex; gap: 0.5rem; border-top: 1px solid #f1f5f9; padding-top: 0.75rem; }
 .btn-treat { flex: 1; background: #0ea5e9; color: white; border: none; padding: 0.45rem 0.75rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 .btn-treat:hover { background: #0284c7; }
+.btn-edit { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 0.45rem 0.75rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.85rem; }
+.btn-edit:hover { background: #dcfce7; }
 .btn-delete { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 0.45rem 0.75rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.85rem; }
 .btn-delete:hover { background: #ffe4e6; }
 

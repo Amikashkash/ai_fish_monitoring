@@ -43,6 +43,7 @@ class ShipmentCreate(ShipmentBase):
 class ShipmentUpdate(BaseModel):
     """Schema for updating an existing shipment. All fields optional."""
 
+    date: Optional[Date] = Field(None, description="Shipment arrival date")
     scientific_name: Optional[str] = Field(None, min_length=1, max_length=200)
     common_name: Optional[str] = Field(None, max_length=200)
     source: Optional[str] = Field(None, min_length=1, max_length=100)
