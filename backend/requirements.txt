@@ -8,7 +8,7 @@ uvicorn[standard]==0.27.0
 # Database
 sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
-supabase==2.3.4
+supabase==2.9.1
 
 # Data Validation
 pydantic==2.10.6
@@ -21,7 +21,7 @@ anthropic==0.18.1
 python-dotenv==1.0.0
 
 # HTTP Client
-httpx==0.26.0
+httpx>=0.26.0
 
 # Utilities
 python-multipart==0.0.6
