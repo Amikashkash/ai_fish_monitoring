@@ -89,11 +89,61 @@
           </router-link>
           <button
             v-if="t.status === 'active'"
+            @click="toggleEdit(t.id)"
+            class="btn btn-edit-drugs"
+            :class="{ active: expandedId === t.id }"
+          >
+            {{ expandedId === t.id ? "Done Editing" : "Edit Drugs" }}
+          </button>
+          <button
+            v-if="t.status === 'active'"
             @click="complete(t)"
             class="btn btn-complete"
           >
             Mark Complete
           </button>
+        </div>
+
+        <!-- Inline drug editor -->
+        <div v-if="expandedId === t.id" class="drug-editor">
+          <div class="drug-editor-title">Drug Protocols</div>
+
+          <!-- Current drugs -->
+          <div v-if="t.drugs && t.drugs.length" class="current-drugs">
+            <div v-for="d in t.drugs" :key="d.id" class="drug-row">
+              <span class="drug-name">{{ protocolMap[d.drug_protocol_id]?.drug_name || `Protocol #${d.drug_protocol_id}` }}</span>
+              <span v-if="d.actual_dosage" class="drug-dose">{{ d.actual_dosage }}</span>
+              <button class="btn-remove-drug" @click="removeDrug(t, d.id)" title="Remove">✕</button>
+            </div>
+          </div>
+          <p v-else class="no-drugs">No drugs assigned yet.</p>
+
+          <!-- Add drug row -->
+          <div class="add-drug-row">
+            <select v-model="drugForm.drug_protocol_id" class="drug-select">
+              <option value="" disabled>Select protocol...</option>
+              <option
+                v-for="p in allProtocols"
+                :key="p.id"
+                :value="p.id"
+              >{{ p.drug_name }}</option>
+            </select>
+            <input
+              v-model.number="drugForm.actual_dosage"
+              type="number"
+              step="0.01"
+              placeholder="Dosage"
+              class="dosage-input"
+            />
+            <button
+              class="btn-add-drug"
+              :disabled="!drugForm.drug_protocol_id || drugSaving"
+              @click="addDrug(t)"
+            >
+              {{ drugSaving ? "Adding..." : "+ Add" }}
+            </button>
+          </div>
+          <p v-if="drugError" class="drug-error">{{ drugError }}</p>
         </div>
       </div>
     </div>
@@ -190,9 +240,54 @@ export default {
       }
     };
 
+    // Drug editor state
+    const expandedId = ref(null);
+    const drugForm = ref({ drug_protocol_id: "", actual_dosage: null });
+    const drugSaving = ref(false);
+    const drugError = ref("");
+
+    const allProtocols = computed(() => Object.values(protocolMap.value));
+
+    const toggleEdit = (id) => {
+      expandedId.value = expandedId.value === id ? null : id;
+      drugForm.value = { drug_protocol_id: "", actual_dosage: null };
+      drugError.value = "";
+    };
+
+    const addDrug = async (t) => {
+      if (!drugForm.value.drug_protocol_id) return;
+      drugSaving.value = true;
+      drugError.value = "";
+      try {
+        await treatmentsAPI.addDrug(t.id, {
+          drug_protocol_id: parseInt(drugForm.value.drug_protocol_id),
+          actual_dosage: drugForm.value.actual_dosage || null,
+        });
+        drugForm.value = { drug_protocol_id: "", actual_dosage: null };
+        await load();
+      } catch (e) {
+        drugError.value = e.response?.data?.detail || "Failed to add drug.";
+      } finally {
+        drugSaving.value = false;
+      }
+    };
+
+    const removeDrug = async (t, drugId) => {
+      try {
+        await treatmentsAPI.removeDrug(t.id, drugId);
+        await load();
+      } catch (e) {
+        alert("Failed to remove drug.");
+      }
+    };
+
     onMounted(load);
 
-    return { loading, showAll, enriched, load, complete };
+    return {
+      loading, showAll, enriched, load, complete,
+      expandedId, drugForm, drugSaving, drugError,
+      allProtocols, protocolMap, toggleEdit, addDrug, removeDrug,
+    };
   }
 };
 </script>
@@ -385,5 +480,124 @@ export default {
   text-align: center;
   padding: 3rem;
   color: #6b7280;
+}
+
+/* Drug editor */
+.btn-edit-drugs {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.btn-edit-drugs:hover { background: #e0f2fe; }
+.btn-edit-drugs.active { background: #e0f2fe; border-color: #7dd3fc; }
+
+.drug-editor {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.drug-editor-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.75rem;
+}
+
+.current-drugs {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.drug-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.drug-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.drug-dose {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.btn-remove-drug {
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  line-height: 1;
+}
+.btn-remove-drug:hover { background: #fef2f2; }
+
+.no-drugs {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 0.75rem 0;
+}
+
+.add-drug-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.drug-select {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  font-size: 0.88rem;
+  background: white;
+  color: #1e293b;
+}
+
+.dosage-input {
+  width: 90px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  font-size: 0.88rem;
+}
+
+.btn-add-drug {
+  padding: 0.45rem 0.9rem;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-add-drug:hover:not(:disabled) { background: #0284c7; }
+.btn-add-drug:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.drug-error {
+  font-size: 0.82rem;
+  color: #dc2626;
+  margin: 0.4rem 0 0 0;
 }
 </style>

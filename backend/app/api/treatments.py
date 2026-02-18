@@ -6,7 +6,7 @@ from supabase import Client
 from datetime import date
 
 from app.config.supabase_client import get_supabase
-from app.schemas.treatment import TreatmentCreate, TreatmentResponse
+from app.schemas.treatment import TreatmentCreate, TreatmentResponse, TreatmentDrugCreate
 
 router = APIRouter(prefix="/api/treatments", tags=["treatments"])
 
@@ -89,6 +89,44 @@ async def create_treatment(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create treatment: {str(e)}")
+
+
+@router.post("/{treatment_id}/drugs", status_code=201)
+async def add_treatment_drug(
+    treatment_id: int,
+    drug: TreatmentDrugCreate,
+    supabase: Client = Depends(get_supabase)
+):
+    """Add a drug protocol to an existing treatment."""
+    try:
+        data = {
+            "treatment_id": treatment_id,
+            "drug_protocol_id": drug.drug_protocol_id,
+            "actual_dosage": float(drug.actual_dosage) if drug.actual_dosage else None,
+            "actual_frequency": drug.actual_frequency,
+            "notes": drug.notes,
+        }
+        response = supabase.table("treatment_drugs").insert(data).execute()
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to add drug")
+        return response.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add drug: {str(e)}")
+
+
+@router.delete("/{treatment_id}/drugs/{drug_id}", status_code=204)
+async def remove_treatment_drug(
+    treatment_id: int,
+    drug_id: int,
+    supabase: Client = Depends(get_supabase)
+):
+    """Remove a drug from a treatment."""
+    try:
+        supabase.table("treatment_drugs").delete().eq("id", drug_id).eq("treatment_id", treatment_id).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove drug: {str(e)}")
 
 
 @router.post("/{treatment_id}/complete", response_model=TreatmentResponse)
