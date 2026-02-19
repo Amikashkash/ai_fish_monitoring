@@ -2,7 +2,7 @@
   <div class="shipments-page">
     <div class="page-header">
       <h2>Shipments</h2>
-      <div class="header-actions">
+      <div class="header-actions" v-if="isAdmin">
         <router-link to="/import" class="btn-primary">Import Invoice</router-link>
         <router-link to="/shipments" class="btn-secondary">Add Manually</router-link>
       </div>
@@ -61,7 +61,7 @@
             </div>
           </div>
 
-          <div class="card-actions">
+          <div class="card-actions" v-if="isAdmin">
             <button class="btn-treat" @click="openTreatModal(s)">Start Treatment</button>
             <button class="btn-edit" @click="openEditModal(s)" title="Edit shipment details">Edit</button>
             <button class="btn-delete" @click="confirmDelete(s)" title="Delete (DOA / shipping issue)">Delete</button>
@@ -244,9 +244,14 @@
 
 <script>
 import { shipmentsAPI, treatmentsAPI, protocolsAPI } from "../api/client.js";
+import { useAuth } from "../composables/useAuth.js";
 
 export default {
   name: "ShipmentsList",
+  setup() {
+    const { isAdmin } = useAuth();
+    return { isAdmin };
+  },
   data() {
     return {
       shipments: [],

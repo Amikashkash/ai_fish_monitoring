@@ -13,6 +13,14 @@ const apiClient = axios.create({
   }
 });
 
+// Inject admin JWT on every request when available
+const STORAGE_KEY = "fm_admin_token";
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem(STORAGE_KEY);
+  if (token) config.headers["Authorization"] = `Bearer ${token}`;
+  return config;
+});
+
 // Shipments API
 export const shipmentsAPI = {
   create: (data) => apiClient.post("/api/shipments/", data),

@@ -2,7 +2,7 @@
   <div class="protocols-page">
     <div class="page-header">
       <h2>Drug Protocols</h2>
-      <button class="btn-primary" @click="openAddForm">+ Add Protocol</button>
+      <button v-if="isAdmin" class="btn-primary" @click="openAddForm">+ Add Protocol</button>
     </div>
 
     <!-- Add / Edit Form -->
@@ -70,7 +70,7 @@
       <div v-for="protocol in protocols" :key="protocol.id" class="protocol-card">
         <div class="protocol-header">
           <h3>{{ protocol.drug_name }}</h3>
-          <div class="card-actions">
+          <div class="card-actions" v-if="isAdmin">
             <button class="btn-icon btn-edit" @click="openEditForm(protocol)" title="Edit">✏️</button>
             <button class="btn-icon btn-delete" @click="deleteProtocol(protocol)" title="Delete">🗑</button>
           </div>
@@ -119,9 +119,14 @@
 
 <script>
 import { protocolsAPI } from "../api/client.js";
+import { useAuth } from "../composables/useAuth.js";
 
 export default {
   name: "DrugProtocols",
+  setup() {
+    const { isAdmin } = useAuth();
+    return { isAdmin };
+  },
   data() {
     return {
       protocols: [],

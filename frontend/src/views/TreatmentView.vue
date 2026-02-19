@@ -95,7 +95,7 @@
         </div>
 
         <!-- Actions -->
-        <div class="card-actions">
+        <div class="card-actions" v-if="isAdmin">
           <router-link :to="`/checklist/${t.id}`" class="btn btn-obs">
             Record Observation
           </router-link>
@@ -275,6 +275,7 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import { treatmentsAPI, shipmentsAPI, protocolsAPI } from "../api/client";
+import { useAuth } from "../composables/useAuth.js";
 
 const toInputDate = (d) => d ? d.slice(0, 10) : "";
 
@@ -492,10 +493,13 @@ export default {
       }
     };
 
+    const { isAdmin } = useAuth();
+
     onMounted(load);
 
     return {
       loading, showAll, enriched, load,
+      isAdmin,
       TODAY, outcomeLabel,
       graduateTarget, graduateForm, graduating, graduateError, openGraduate, doGraduate,
       expandedId, drugForm, drugSaving, drugError,

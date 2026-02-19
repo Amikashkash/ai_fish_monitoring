@@ -10,12 +10,16 @@ registers all API routes, and sets up middleware.
 Run with: uvicorn app.main:app --reload
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+import jwt
 
 from app.config.settings import get_settings
 from app.config.database import Base, engine
 from app.api import (
+    auth,
     shipments,
     treatments,
     observations,
@@ -51,7 +55,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Auth middleware — block all write requests without a valid admin JWT
+WRITE_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
+PUBLIC_PREFIXES = ("/api/auth", "/docs", "/openapi", "/redoc", "/health", "/")
+
+
+@app.middleware("http")
+async def require_admin_for_writes(request: Request, call_next):
+    if request.method in WRITE_METHODS:
+        path = request.url.path
+        if not any(path.startswith(p) for p in PUBLIC_PREFIXES):
+            auth_header = request.headers.get("Authorization", "")
+            token = auth_header.removeprefix("Bearer ").strip()
+            try:
+                jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+            except jwt.PyJWTError:
+                return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    return await call_next(request)
+
+
 # Register API routers
+app.include_router(auth.router)
 app.include_router(shipments.router)
 app.include_router(treatments.router)
 app.include_router(observations.router)

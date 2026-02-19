@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str
     SUPABASE_DB_PASSWORD: str
 
+    # Auth
+    ADMIN_PASSWORD: str = "changeme"
+    JWT_SECRET: str = "change-this-secret-in-production"
+
     # n8n Integration
     N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook/fish-monitoring"
 
