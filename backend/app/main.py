@@ -57,14 +57,18 @@ app.add_middleware(
 
 # Auth middleware — block all write requests without a valid admin JWT
 WRITE_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
-PUBLIC_PREFIXES = ("/api/auth", "/docs", "/openapi", "/redoc", "/health", "/")
+# Paths that are always public (prefix match); root "/" excluded intentionally
+# so it doesn't match every path.
+PUBLIC_PREFIXES = ("/api/auth", "/docs", "/openapi", "/redoc")
+PUBLIC_EXACT    = {"/", "/health"}
 
 
 @app.middleware("http")
 async def require_admin_for_writes(request: Request, call_next):
     if request.method in WRITE_METHODS:
         path = request.url.path
-        if not any(path.startswith(p) for p in PUBLIC_PREFIXES):
+        is_public = path in PUBLIC_EXACT or any(path.startswith(p) for p in PUBLIC_PREFIXES)
+        if not is_public:
             auth_header = request.headers.get("Authorization", "")
             token = auth_header.removeprefix("Bearer ").strip()
             try:
