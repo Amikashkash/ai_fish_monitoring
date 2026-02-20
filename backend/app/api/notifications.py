@@ -115,5 +115,6 @@ async def send_whatsapp_daily(
     return {
         "status": "sent" if tasks_data["total_active_treatments"] > 0 else "no_treatments",
         "treatments": tasks_data["total_active_treatments"],
-        "date": tasks_data["date"]
+        "date": tasks_data["date"],
+        "whatsapp_response": res.json()
     }
