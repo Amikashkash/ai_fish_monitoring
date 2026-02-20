@@ -56,8 +56,11 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "changeme"
     JWT_SECRET: str = "change-this-secret-in-production"
 
-    # n8n Integration
-    N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook/fish-monitoring"
+    # WhatsApp Notifications
+    WHATSAPP_TOKEN: str = ""
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_TO_NUMBER: str = ""
+    CRON_SECRET: str = ""
 
     # CORS Configuration - includes all common Vite dev ports
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178,http://localhost:3000"

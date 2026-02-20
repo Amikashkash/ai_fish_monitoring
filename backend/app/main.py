@@ -29,7 +29,8 @@ from app.api import (
     recommendations,
     suppliers,
     tasks,
-    excel_import
+    excel_import,
+    notifications
 )
 
 # Initialize settings
@@ -59,7 +60,7 @@ app.add_middleware(
 WRITE_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
 # Paths that are always public (prefix match); root "/" excluded intentionally
 # so it doesn't match every path.
-PUBLIC_PREFIXES = ("/api/auth", "/docs", "/openapi", "/redoc")
+PUBLIC_PREFIXES = ("/api/auth", "/api/notifications", "/docs", "/openapi", "/redoc")
 PUBLIC_EXACT    = {"/", "/health"}
 
 
@@ -90,6 +91,7 @@ app.include_router(excel_import.router)
 app.include_router(recommendations.router)
 app.include_router(suppliers.router)
 app.include_router(tasks.router)
+app.include_router(notifications.router)
 
 
 @app.get("/")
