@@ -366,12 +366,16 @@
           </div>
         </div>
 
+        <div v-if="treatSuccess" class="treat-success">
+          ✓ Treatment started for <em>{{ treatSuccess }}</em>. Close this to treat the next fish.
+        </div>
+
         <div class="modal-actions">
-          <button class="btn-treat-confirm" @click="doStartTreatment"
+          <button v-if="!treatSuccess" class="btn-treat-confirm" @click="doStartTreatment"
             :disabled="treating || !treatForm.aquarium_number || !treatForm.aquarium_volume_liters">
             {{ treating ? 'Starting...' : 'Start Treatment' }}
           </button>
-          <button class="btn-cancel" @click="closeTreatModal">Cancel</button>
+          <button class="btn-cancel" @click="closeTreatModal">{{ treatSuccess ? 'Close' : 'Cancel' }}</button>
         </div>
         <p v-if="treatError" class="error-msg">{{ treatError }}</p>
       </div>
@@ -476,6 +480,7 @@ export default {
       treatForm: { aquarium_number: "", aquarium_volume_liters: null, start_date: new Date().toISOString().split("T")[0] },
       treating: false,
       treatError: "",
+      treatSuccess: "",
       // Edit Fish
       editTarget: null,
       editForm: {},
@@ -653,6 +658,7 @@ export default {
     openTreatModal(fish) {
       this.treatTarget = fish;
       this.treatError = "";
+      this.treatSuccess = "";
       this.selectedProtocols = [];
       this.treatForm = {
         aquarium_number: fish.aquarium_number || "",
@@ -663,6 +669,7 @@ export default {
     closeTreatModal() {
       this.treatTarget = null;
       this.treatError = "";
+      this.treatSuccess = "";
     },
     async doStartTreatment() {
       if (!this.treatForm.aquarium_number || !this.treatForm.aquarium_volume_liters) return;
@@ -679,8 +686,7 @@ export default {
           start_date: this.treatForm.start_date,
           drugs
         });
-        this.closeTreatModal();
-        this.$router.push("/treatments");
+        this.treatSuccess = this.treatTarget.common_name || this.treatTarget.scientific_name;
       } catch (e) {
         const detail = e.response?.data?.detail;
         this.treatError = typeof detail === "string" ? detail : (e.message || "Failed to start treatment.");
@@ -858,6 +864,7 @@ export default {
 .drug-info { font-size: 0.8rem; color: #64748b; }
 .no-drugs { font-size: 0.85rem; color: #94a3b8; }
 
+.treat-success { background: #f0fdf4; border: 1px solid #86efac; border-radius: 0.5rem; padding: 0.75rem 1rem; color: #16a34a; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
 .btn-treat-confirm { flex: 1; background: #0ea5e9; color: white; border: none; padding: 0.65rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
 .btn-treat-confirm:hover { background: #0284c7; }
 .btn-treat-confirm:disabled { opacity: 0.5; cursor: default; }
