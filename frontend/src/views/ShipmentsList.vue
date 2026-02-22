@@ -26,7 +26,7 @@
             <div class="invoice-summary">
               <span class="chevron" :class="{ open: expandedInvoices[inv.id] }">▶</span>
               <div class="invoice-text">
-                <span class="invoice-date">{{ inv.date }}</span>
+                <span class="invoice-date">{{ formatDate(inv.date) }}</span>
                 <span v-if="inv.supplier_name" class="invoice-supplier"> — {{ inv.supplier_name }}</span>
                 <span v-if="inv.invoice_number" class="invoice-num"> #{{ inv.invoice_number }}</span>
               </div>
@@ -95,7 +95,7 @@
               </div>
               <div class="detail">
                 <span class="detail-label">Arrived</span>
-                <span>{{ s.date }}</span>
+                <span>{{ formatDate(s.date) }}</span>
               </div>
               <div class="detail" v-if="s.aquarium_volume_liters && s.aquarium_volume_liters > 1">
                 <span class="detail-label">Tank Vol</span>
@@ -171,7 +171,7 @@
     <div v-if="addFishTarget" class="modal-backdrop" @click.self="addFishTarget = null">
       <div class="modal modal-wide">
         <h3>Add Fish to Invoice</h3>
-        <p class="modal-fish">{{ addFishTarget.date }}<span v-if="addFishTarget.supplier_name"> — {{ addFishTarget.supplier_name }}</span></p>
+        <p class="modal-fish">{{ formatDate(addFishTarget.date) }}<span v-if="addFishTarget.supplier_name"> — {{ addFishTarget.supplier_name }}</span></p>
         <div class="treat-form">
           <div class="form-section">
             <div class="form-row">
@@ -268,7 +268,7 @@
       <div class="modal">
         <h3>Delete Invoice?</h3>
         <p class="modal-fish">
-          {{ deleteInvoiceTarget.date }}
+          {{ formatDate(deleteInvoiceTarget.date) }}
           <span v-if="deleteInvoiceTarget.supplier_name"> — {{ deleteInvoiceTarget.supplier_name }}</span>
         </p>
         <p class="modal-warn">
@@ -493,6 +493,11 @@ export default {
     this.loadProtocols();
   },
   methods: {
+    formatDate(dateStr) {
+      if (!dateStr) return "";
+      const [y, m, d] = dateStr.split("-");
+      return `${d}/${m}/${y}`;
+    },
     async load() {
       this.loading = true;
       this.error = "";
