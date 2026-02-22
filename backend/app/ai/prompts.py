@@ -54,6 +54,12 @@ Analyze the historical data for this fish species from this source and provide:
 4. Key risk factors to monitor
 5. Expected success rate
 
+If past treatments for this specific fish are listed, take them into account:
+- Do NOT recommend drugs that already failed for this fish
+- If a previous treatment succeeded, mention whether regression might indicate
+  a different cause (water quality, secondary infection, etc.)
+- If all previous treatments failed, escalate to a different drug class
+
 Format your response with clear sections and specific dosages."""
 
 
@@ -105,18 +111,30 @@ What protocol should I use if I order?"""
 
 def build_protocol_prompt(
     shipment_summary: str,
-    historical_context: str
+    historical_context: str,
+    treatment_history: str = ""
 ) -> str:
     """Build user prompt for protocol recommendation."""
-    return f"""New shipment received:
+    base = f"""New shipment received:
 
 {shipment_summary}
 
 Historical Data for this species/source:
-{historical_context}
+{historical_context}"""
+
+    if treatment_history:
+        base += f"""
+
+{treatment_history}
+
+IMPORTANT: This fish has already been treated. Avoid repeating protocols that failed.
+If all previous attempts failed, escalate to a different drug class."""
+
+    base += """
 
 Based ONLY on this historical data, what treatment protocol should I use?
 Provide specific drug names, dosages, and duration."""
+    return base
 
 
 def build_learning_prompt(

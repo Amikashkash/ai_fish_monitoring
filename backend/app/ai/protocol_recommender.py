@@ -66,6 +66,30 @@ def _build_historical_context(knowledge: dict) -> str:
     return "\n".join(lines)
 
 
+def _build_treatment_history(treatments: list) -> str:
+    """Format past treatment records for this fish into a context string."""
+    if not treatments:
+        return ""
+    lines = ["Past Treatments for This Fish:"]
+    for i, t in enumerate(treatments, 1):
+        drugs = t.get("treatment_drugs") or []
+        drug_names = ", ".join(
+            d.get("drug_name") or f"Protocol #{d.get('drug_protocol_id')}"
+            for d in drugs
+        ) or "Unknown drugs"
+        outcome = t.get("outcome") or "unknown"
+        score = t.get("outcome_score")
+        score_str = f" ({score}/5 stars)" if score else ""
+        mortality = t.get("total_mortality")
+        mortality_str = f", {mortality} fish died" if mortality else ""
+        notes = t.get("outcome_notes") or ""
+        notes_str = f" — Notes: {notes}" if notes else ""
+        lines.append(
+            f"  Treatment {i}: {drug_names} -> Outcome: {outcome}{score_str}{mortality_str}{notes_str}"
+        )
+    return "\n".join(lines)
+
+
 def recommend_initial_protocol(
     shipment_id: int,
     supabase: Client
@@ -88,6 +112,16 @@ def recommend_initial_protocol(
     if not shipment_resp.data:
         raise ValueError(f"Shipment {shipment_id} not found")
     shipment = shipment_resp.data[0]
+
+    # Step 1b: Get past treatment history for this fish
+    treatments_resp = (
+        supabase.table("treatments")
+        .select("*, treatment_drugs(*)")
+        .eq("shipment_id", shipment_id)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    past_treatments = treatments_resp.data or []
 
     # Step 2: Get historical knowledge for this fish/source
     knowledge_resp = (
@@ -134,9 +168,11 @@ def recommend_initial_protocol(
     except Exception as e:
         print(f"Warning: Could not fetch protocol templates: {e}")
 
+    treatment_history = _build_treatment_history(past_treatments)
     user_prompt = build_protocol_prompt(
         shipment_summary=shipment_summary,
-        historical_context=historical_context
+        historical_context=historical_context,
+        treatment_history=treatment_history
     )
 
     if protocol_template_context:
