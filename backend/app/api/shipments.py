@@ -123,7 +123,7 @@ async def get_shipment(
 @router.get("/", response_model=ShipmentList)
 async def list_shipments(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=500),
     source: Optional[str] = None,
     scientific_name: Optional[str] = None,
     supabase: Client = Depends(get_supabase)
