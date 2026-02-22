@@ -89,7 +89,7 @@ async def update_shipment(
     try:
         # Only allow safe fields to be updated
         allowed = {"aquarium_number", "aquarium_volume_liters", "common_name",
-                   "fish_size", "notes", "invoice_number", "supplier_name"}
+                   "fish_size", "notes", "invoice_number", "supplier_name", "invoice_id"}
         update_data = {k: v for k, v in data.items() if k in allowed}
         if not update_data:
             raise HTTPException(status_code=400, detail="No updatable fields provided")

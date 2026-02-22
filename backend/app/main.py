@@ -30,7 +30,8 @@ from app.api import (
     suppliers,
     tasks,
     excel_import,
-    notifications
+    notifications,
+    invoices
 )
 
 # Initialize settings
@@ -92,6 +93,7 @@ app.include_router(recommendations.router)
 app.include_router(suppliers.router)
 app.include_router(tasks.router)
 app.include_router(notifications.router)
+app.include_router(invoices.router)
 
 
 @app.get("/")

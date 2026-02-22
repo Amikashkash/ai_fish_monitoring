@@ -134,14 +134,14 @@
       <!-- Action Buttons -->
       <div class="result-actions">
         <button class="btn-primary" @click="createAllShipments" :disabled="creating || !canCreate">
-          {{ creating ? `Creating... (${createProgress}/${extracted.fish_species.length})` : `Create ${extracted.fish_species.length} Shipment(s)` }}
+          {{ creating ? `Creating... (${createProgress}/${extracted.fish_species.length})` : `Import ${extracted.fish_species.length} Species as 1 Shipment` }}
         </button>
         <button class="btn-secondary" @click="startOver">Upload Different Invoice</button>
       </div>
 
       <!-- Creation Results -->
       <div v-if="createdShipments.length" class="success-box">
-        <p class="success-msg">✓ Created {{ createdShipments.length }} shipment(s) successfully!</p>
+        <p class="success-msg">✓ Imported {{ createdShipments.length }} species into 1 shipment!</p>
         <ul class="created-list">
           <li v-for="s in createdShipments" :key="s.id">
             <strong>{{ s.scientific_name }}</strong>
@@ -162,7 +162,7 @@
 </template>
 
 <script>
-import { excelImportAPI, shipmentsAPI } from "../api/client.js";
+import { excelImportAPI, invoicesAPI } from "../api/client.js";
 
 const DRAFT_KEY = "fish_import_draft";
 
@@ -301,38 +301,52 @@ export default {
       const today = new Date().toISOString().split("T")[0];
       const errors = [];
 
-      for (const species of this.extracted.fish_species) {
-        try {
-          const payload = {
-            scientific_name: species.scientific_name,
-            common_name: species.common_name || undefined,
-            source: this.extracted.source_country || "Unknown",
-            quantity: species.quantity,
-            date: this.extracted.shipment_date || today,
-            fish_size: species.size || undefined,
-            price_per_fish: species.price_per_unit || undefined,
-            aquarium_number: species.aquarium_number || undefined,
-            aquarium_volume_liters: species.aquarium_volume_liters || undefined,
-            invoice_number: this.extracted.invoice_number || undefined,
-            supplier_name: this.extracted.supplier_name || undefined,
-            notes: this.extracted.additional_notes || undefined
-          };
-          const res = await shipmentsAPI.create(payload);
-          this.createdShipments.push(res.data);
-          this.createProgress++;
-        } catch (e) {
-          const detail = e.response?.data?.detail;
-          const msg = Array.isArray(detail)
-            ? detail.map(d => `${d.loc?.slice(-1)[0]}: ${d.msg}`).join("; ")
-            : (typeof detail === "string" ? detail : e.message);
-          errors.push(`${species.scientific_name}: ${msg}`);
-          this.createProgress++;
+      try {
+        // 1. Create the invoice (shipment header)
+        const invoicePayload = {
+          date: this.extracted.shipment_date || today,
+          source: this.extracted.source_country || "",
+          supplier_name: this.extracted.supplier_name || undefined,
+          invoice_number: this.extracted.invoice_number || undefined,
+          notes: this.extracted.additional_notes || undefined
+        };
+        const invRes = await invoicesAPI.create(invoicePayload);
+        const invoiceId = invRes.data.id;
+
+        // 2. Add each species as a fish item inside the invoice
+        for (const species of this.extracted.fish_species) {
+          try {
+            const payload = {
+              scientific_name: species.scientific_name,
+              common_name: species.common_name || undefined,
+              quantity: species.quantity,
+              fish_size: species.size || undefined,
+              price_per_fish: species.price_per_unit || undefined,
+              aquarium_number: species.aquarium_number || undefined,
+              aquarium_volume_liters: species.aquarium_volume_liters || undefined
+            };
+            const res = await invoicesAPI.addFish(invoiceId, payload);
+            this.createdShipments.push(res.data);
+            this.createProgress++;
+          } catch (e) {
+            const detail = e.response?.data?.detail;
+            const msg = Array.isArray(detail)
+              ? detail.map(d => `${d.loc?.slice(-1)[0]}: ${d.msg}`).join("; ")
+              : (typeof detail === "string" ? detail : e.message);
+            errors.push(`${species.scientific_name}: ${msg}`);
+            this.createProgress++;
+          }
         }
+      } catch (e) {
+        const detail = e.response?.data?.detail;
+        this.createError = typeof detail === "string" ? detail : "Failed to create shipment.";
+        this.creating = false;
+        return;
       }
 
       this.creating = false;
       if (errors.length) {
-        this.createError = "Some shipments failed:\n" + errors.join("\n");
+        this.createError = "Some species failed:\n" + errors.join("\n");
       }
       if (this.createdShipments.length) {
         localStorage.removeItem(DRAFT_KEY);

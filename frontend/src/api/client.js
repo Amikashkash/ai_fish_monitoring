@@ -94,6 +94,15 @@ export const suppliersAPI = {
   getScores: () => apiClient.get("/api/suppliers/scores")
 };
 
+// Invoices API
+export const invoicesAPI = {
+  list: () => apiClient.get("/api/invoices/"),
+  create: (data) => apiClient.post("/api/invoices/", data),
+  update: (id, data) => apiClient.patch(`/api/invoices/${id}`, data),
+  delete: (id) => apiClient.delete(`/api/invoices/${id}`),
+  addFish: (id, data) => apiClient.post(`/api/invoices/${id}/fish`, data)
+};
+
 // Tasks API
 export const tasksAPI = {
   getDaily: () => apiClient.get("/api/tasks/daily")
