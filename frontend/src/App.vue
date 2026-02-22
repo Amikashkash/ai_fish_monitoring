@@ -11,7 +11,7 @@
       </div>
       <nav class="nav-tabs">
         <router-link to="/" class="nav-tab">Home</router-link>
-        <router-link v-if="isAdmin" to="/daily" class="nav-tab nav-highlight">Daily Rounds</router-link>
+        <router-link v-if="isAdmin" to="/daily" class="nav-tab">Daily Rounds</router-link>
         <router-link to="/shipments-list" class="nav-tab">Shipments</router-link>
         <router-link v-if="isAdmin" to="/import" class="nav-tab">Import Invoice</router-link>
         <router-link to="/treatments" class="nav-tab">Treatments</router-link>
@@ -125,15 +125,14 @@ export default {
   transition: background 0.2s;
 }
 
-.nav-tab:hover,
-.nav-tab.router-link-active {
+.nav-tab:hover {
   background: rgba(255,255,255,0.3);
 }
 
-.nav-highlight {
-  background: rgba(255,255,255,0.35);
+.nav-tab.router-link-exact-active {
+  background: white;
+  color: #0284c7;
   font-weight: 700;
-  border: 1px solid rgba(255,255,255,0.5);
 }
 
 .app-main {
