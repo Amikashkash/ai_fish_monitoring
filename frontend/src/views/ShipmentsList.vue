@@ -48,9 +48,9 @@
                 <span class="fish-sci">{{ fish.scientific_name }}</span>
                 <span v-if="fish.common_name && fish.common_name !== fish.scientific_name" class="fish-common"> ({{ fish.common_name }})</span>
                 <span class="fish-qty"> — {{ fish.quantity }} fish</span>
-                <span v-if="fish.aquarium_number" class="fish-tank"> | {{ fish.aquarium_number }}</span>
-                <span v-if="fish.aquarium_volume_liters && fish.aquarium_volume_liters > 1" class="fish-vol"> {{ fish.aquarium_volume_liters }}L</span>
-                <span v-if="fish.fish_size" class="fish-size-badge"> {{ fish.fish_size }}</span>
+                <span v-if="fish.aquarium_number" class="fish-tank"> | Tank {{ fish.aquarium_number }}</span>
+                <span v-if="fish.aquarium_volume_liters && fish.aquarium_volume_liters > 1" class="fish-vol">, {{ fish.aquarium_volume_liters }}L</span>
+                <span v-if="fish.fish_size" class="fish-size-badge">, {{ fish.fish_size }}</span>
               </div>
               <div class="fish-actions" v-if="isAdmin">
                 <button class="btn-treat-sm" @click.stop="openTreatModal(fish)">Treat</button>
@@ -691,6 +691,18 @@ export default {
           start_date: this.treatForm.start_date,
           drugs
         });
+        // Update local fish object so the row shows the new tank and edit form pre-fills correctly
+        const updatedProps = {
+          aquarium_number: this.treatForm.aquarium_number,
+          aquarium_volume_liters: this.treatForm.aquarium_volume_liters
+        };
+        for (const inv of this.invoices) {
+          const fish = (inv.shipments || []).find(f => f.id === this.treatTarget.id);
+          if (fish) Object.assign(fish, updatedProps);
+        }
+        const s = this.standaloneShipments.find(s => s.id === this.treatTarget.id);
+        if (s) Object.assign(s, updatedProps);
+
         this.treatSuccess = this.treatTarget.common_name || this.treatTarget.scientific_name;
       } catch (e) {
         const detail = e.response?.data?.detail;
